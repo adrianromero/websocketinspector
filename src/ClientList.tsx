@@ -87,34 +87,36 @@ const ClientList: FC = () => {
                     <DeleteIcon />
                 </IconButton>
             </div>
-            <List component="nav" aria-label="main mailbox folders" className={styles.clientMenu}>
-                {items.map((item) =>
-                    <ListItemButton
-                        selected={item.identifier === current}
-                        onClick={(event) => {
-                            setView("header");
-                            setCurrent(item.identifier);
-                        }}
-                    >
-                        <ListItemIcon>
-                            {item.connection.disconnection ? (
-                                <LinkIcon
-                                    sx={{ color: "red", fontSize: "120%" }}
-                                />
-                            ) : (
-                                <LinkOffIcon
-                                    sx={{ color: "#87d068", fontSize: "120%" }}
-                                />
-                            )}
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={item.connection.connection.client.address}
-                            secondary={item.connection.connection.tail}
-                        />
-                    </ListItemButton>
-                )
-                }
-            </List>
+            <div className={styles.scrollcontainer}>
+                <List component="nav" aria-label="main mailbox folders" className={styles.scrolllist}>
+                    {items.map((item) =>
+                        <ListItemButton
+                            selected={item.identifier === current}
+                            onClick={(event) => {
+                                setView("header");
+                                setCurrent(item.identifier);
+                            }}
+                        >
+                            <ListItemIcon>
+                                {item.connection.disconnection ? (
+                                    <LinkIcon
+                                        sx={{ color: "red", fontSize: "120%" }}
+                                    />
+                                ) : (
+                                    <LinkOffIcon
+                                        sx={{ color: "#87d068", fontSize: "120%" }}
+                                    />
+                                )}
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={item.connection.connection.client.address}
+                                secondary={item.connection.connection.tail}
+                            />
+                        </ListItemButton>
+                    )
+                    }
+                </List>
+            </div>
             {tab}
         </div>
     );

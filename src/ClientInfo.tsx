@@ -10,24 +10,9 @@ export type ServerStatusProps = {
 
 const ClientInfo: FC<Connection> = connection => {
     return (
-        <div
-            style={{
-                border: "1px solid rgba(5,5,5,0.1)",
-                borderRadius: "8px",
-                display: "flex",
-                justifyItems: "stretch",
-                overflow: "auto",
-            }}
-        >
-            <div
-                style={{
-
-                    overflow: "auto",
-
-                }}
-            >
+        <div className={styles.scrollcontainer}>
+            <div className={styles.scrolllist + " " + styles.infocontent}>
                 <Typography>Client information</Typography>
-
                 <div>
                     <span className={styles.infolabel}>Address: </span>
                     <span>{connection.connection.client.address}</span>

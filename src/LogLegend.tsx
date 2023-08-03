@@ -4,7 +4,7 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 //import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { SvgIconTypeMap, Typography } from '@mui/material';
-import { LogEvent } from "./LoggingList";
+import type { LogEvent } from "./features/websocketSlice";
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 
 const LogLegend: FC<LogEvent> = ({ kind, time, payload }) => {
