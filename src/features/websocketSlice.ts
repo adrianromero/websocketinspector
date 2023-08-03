@@ -66,10 +66,7 @@ export type Connection = {
     request: Request;
     time: Date;
     messages: LogEventMessage[];
-    disconnection: {
-        time: Date;
-        message: { code: number; reason: string } | null;
-    } | null;
+    disconnection?: LogEventDisconnection;
 };
 
 export interface WebsocketState {
@@ -115,7 +112,6 @@ export const websocketSlice = createSlice({
                 request: action.payload,
                 time: now,
                 messages: [],
-                disconnection: null,
             });
             // Logging
             if (state.clientlogactive) {
@@ -136,8 +132,9 @@ export const websocketSlice = createSlice({
             );
             if (current) {
                 current.disconnection = {
+                    kind: "disconnect",
                     time: now,
-                    message: action.payload.message,
+                    payload: action.payload,
                 };
                 // Logging
                 if (state.clientlogactive) {
