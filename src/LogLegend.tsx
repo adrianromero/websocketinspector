@@ -1,60 +1,73 @@
-
-import type { FC } from 'react';
-import { ArrowDownOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
-import { LogEvent } from './LoggingList';
-import { Tag, Typography } from 'antd';
-
-const { Paragraph } = Typography;
+import type { FC } from "react";
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+//import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import { SvgIconTypeMap, Typography } from '@mui/material';
+import { LogEvent } from "./LoggingList";
+import { OverridableComponent } from "@mui/material/OverridableComponent";
 
 const LogLegend: FC<LogEvent> = ({ kind, time, payload }) => {
-    const timecomponent = <div style={{ flexGrow: "1", textAlign: "end", fontSize: "90%" }}>{time.toLocaleString()}</div>
+
     let label;
-    let icon;
-    let color
+    let Icon: OverridableComponent<SvgIconTypeMap> & { muiName: string };
+    let color;
     let paragraph;
-    if (kind === 'connect') {
+    if (kind === "connect") {
         label = "CONNECT " + payload.client.address;
-        icon = <LinkOutlined />;
+        Icon = LinkIcon;
         color = "green";
-        paragraph = <Paragraph style={{ fontSize: "90%" }}>/{payload.tail}</Paragraph>
-    } else if (kind === 'disconnect') {
+        paragraph = (
+            <Typography variant="body1">/{payload.tail}</Typography>
+        );
+    } else if (kind === "disconnect") {
         label = "DISCONNECT " + payload.client.address;
-        icon = <DisconnectOutlined />;
+        Icon = LinkOffIcon;
         color = "magenta";
-        let text: string = payload.message ? `${payload.message.code}: ${payload.message.reason}`
+        let text: string = payload.message
+            ? `${payload.message.code}: ${payload.message.reason}`
             : "unknown:";
-        paragraph = <Paragraph style={{ fontSize: "90%" }}>{text}</Paragraph>;
-    } else if (kind === 'message') {
-        let text: string = '';
-        icon = <ArrowDownOutlined />;
+        paragraph = <Typography variant="body2">{text}</Typography>;
+    } else if (kind === "message") {
+        let text: string = "";
+        Icon = ArrowDownwardIcon;
         color = "blue";
         if ("TEXT" in payload.message) {
-            label = "TEXT " + payload.client.address;;
+            label = "TEXT " + payload.client.address;
             text = payload.message.TEXT.msg;
         } else if ("BINARY" in payload.message) {
-            label = "BINARY " + payload.client.address;;
+            label = "BINARY " + payload.client.address;
             text = "BASE64"; // payload.message.BINARY.msg;
         } else {
             label = "UNKNOWN " + payload.client.address;
-            text = '';
+            text = "";
         }
-        paragraph = <Paragraph copyable style={{ fontFamily: "monospace", fontSize: "90%" }}>{text}</Paragraph>
+        paragraph = (
+            <Typography
+                variant="body1"
+                style={{ fontFamily: "monospace" }}
+            >
+                {text}
+            </Typography>
+        );
     } else {
         label = "UNKNOWN";
-        icon = null;
+        Icon = LinkOffIcon;
         color = "";
         paragraph = null;
-
     }
-    return <div>
-        <div style={{ display: "flex" }}>
-            <Tag icon={icon} color={color}>
-                {label}
-            </Tag>
-            {timecomponent}
+    return (
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Icon fontSize="small" sx={{ color: color }} />
+                <Typography variant="body2" style={{ flexGrow: "1", fontWeight: 800 }}> {label}</Typography>
+                <Typography variant="body2" >
+                    {time.toLocaleString()}
+                </Typography>
+            </div>
+            {paragraph}
         </div>
-        {paragraph}
-    </div >;
-}
+    );
+};
 
 export default LogLegend;

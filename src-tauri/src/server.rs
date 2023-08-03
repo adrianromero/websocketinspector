@@ -12,7 +12,7 @@ pub struct ServerStatus {
 pub struct ConnectMessage {
     pub client: Client,
     pub tail: String,
-    pub query: String,
+    pub query: HashMap<String, String>,
     pub headers: HashMap<String, Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]

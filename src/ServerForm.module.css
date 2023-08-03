@@ -1,0 +1,17 @@
+.serverformcontainer {
+    padding: 1.5rem 0.5rem 0.5rem 0.5rem;
+}
+
+.serverformstatus {
+    text-align: right;
+}
+
+.serverformlabel {
+    text-align: end;
+}
+
+.serverformlabel > label {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+}

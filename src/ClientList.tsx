@@ -1,106 +1,123 @@
+import { FC, useState, useEffect } from "react";
+import { IconButton } from "@mui/material";
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import DeleteIcon from "@mui/icons-material/Delete";
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import ClientInfo from "./ClientInfo";
+import {
+    selectWebsocketConnection,
+    selectWebsocketConnections,
+} from "./features/websocketSlice";
+import { useAppSelector } from "./app/hooks";
 
-import { FC, useEffect, useState } from 'react';
-import { Menu } from 'antd';
-import type { MenuProps } from 'antd';
-import { listen } from '@tauri-apps/api/event';
-import { Client, ClientConnectionPayload, ClientDisconnectionPayload } from './Client';
-import { DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
-import ClientInfo from './ClientInfo';
+import styles from "./ClientList.module.css";
+import ClientMessages from "./ClientMessages";
 
-export type TextMessage = {
-    TEXT: { msg: string }
-}
-
-export type BinaryMessage = {
-    BINARY: { msg: number[] }
-}
-
-export type MessagePayload = {
-    client: Client,
-    message: TextMessage | BinaryMessage
-}
-
-export type MessageInfo = {
-    time: Date,
-    message: TextMessage | BinaryMessage
-}
-
-export type Connection = {
-    connection: ClientConnectionPayload;
-    time: Date;
-    messages: MessageInfo[],
-    disconnection: {
-        time: Date
-        message: { code: number, reason: string } | null
-    } | null
-}
 const ClientList: FC = () => {
-    const [current, setCurrent] = useState<Connection | undefined>(undefined);
-    const [connections, setConnections] = useState<Connection[]>([]);
+    const [current, setCurrent] = useState<number | undefined>(undefined);
+    const [view, setView] = useState<string>("header");
+    const currentConnection = useAppSelector(
+        selectWebsocketConnection(current)
+    );
+    const connections = useAppSelector(selectWebsocketConnections);
+    const items = Array.from(connections.entries()).map(
+        ([identifier, connection]) => ({ identifier, connection }));
+    const itemsLength = items.length;
+
     useEffect(() => {
-        const clientconnect = listen('client_connect', (event) => {
-            setConnections(value => [...value, {
-                connection: event.payload as ClientConnectionPayload,
-                time: new Date(),
-                messages: [],
-                disconnection: null
-            }]);
-
-        })
-        const clientdisconnect = listen('client_disconnect', (event) => {
-            const disconnection = (event.payload as ClientDisconnectionPayload)
-            setConnections(value => value.map(c => {
-                if (c.connection.client.identifier === disconnection.client.identifier) {
-                    return { ...c, disconnection: { time: new Date(), message: disconnection.message } }
-                }
-                return c;
-            }));
-
-        })
-        const clientmessage = listen('client_message', (event) => {
-            const message = (event.payload as MessagePayload)
-            setConnections(value => value.map(c => {
-                if (c.connection.client.identifier === message.client.identifier) {
-                    return { ...c, messages: [...c.messages, { time: new Date(), message: message.message }] }
-                }
-                return c;
-            }));
-        })
-        return () => {
-            clientconnect.then(f => f());
-            clientdisconnect.then(f => f());
-            clientmessage.then(f => f());
-        };
-    }, []);
-
-    const items = connections.map(connection => {
-        return {
-            key: String(connection.connection.client.identifier),
-            label: <div style={{ fontSize: "90%", lineHeight: "1rem" }}>
-                <div style={{ fontWeight: 800 }}>{connection.connection.client.address}</div>
-                <div>/{connection.connection.tail}</div>
-            </div >,
-            icon: connection.disconnection
-                ? <DisconnectOutlined style={{ color: "red", fontSize: "120%" }} />
-                : <LinkOutlined style={{ color: "#87d068", fontSize: "120%" }} />
+        if (itemsLength && typeof current !== "number") {
+            setView("header")
+            setCurrent(items[0].identifier);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [current, itemsLength]);
 
-    });
+    let tab = null;
+    if (currentConnection) {
+        if (view === "header") {
+            tab = <ClientInfo {...currentConnection} />;
+        } else if (view === "messages") {
+            tab = <ClientMessages {...currentConnection} />;
+        } else {
+            tab = <div style={{ backgroundColor: "white" }} />;
+        }
+    } else {
+        tab = <div style={{ backgroundColor: "white" }} />;
+    }
 
-    const onclick: MenuProps['onClick'] = ({ key }) => { setCurrent(connections.find(connection => String(connection.connection.client.identifier) === key)) };
-
-    return <div style={{ display: "flex", gap: "0.5rem", height: '100%', flexDirection: "row" }}>
-        <Menu
-            mode="inline"
-            items={items}
-            onClick={onclick}
-            style={{ overflow: "auto", minWidth: "15rem", maxWidth: "15rem", border: "1px solid rgba(5,5,5,0.1)", borderRadius: "8px" }}
-        />
-        {current
-            ? <ClientInfo {...current} />
-            : <div style={{ flexGrow: "1", backgroundColor: "white" }} />}
-
-    </div>
-}
+    return (
+        <div className={styles.container}>
+            <div className={styles.toolbar}>
+                <IconButton
+                    aria-label="clear"
+                    color="default"
+                    onClick={() => { }}
+                >
+                    <DeleteIcon />
+                </IconButton>
+            </div>
+            <div className={styles.toolbar}>
+                <ToggleButtonGroup
+                    color="standard"
+                    size="small"
+                    value={view}
+                    exclusive
+                    onChange={(
+                        event: React.MouseEvent<HTMLElement>,
+                        value: string,
+                    ) => {
+                        setView(value);
+                    }}
+                    aria-label="Platform"
+                >
+                    <ToggleButton value="header">Header</ToggleButton>
+                    <ToggleButton value="messages">Messages</ToggleButton>
+                </ToggleButtonGroup>
+                <IconButton
+                    aria-label="clear"
+                    color="default"
+                    onClick={() => { }}
+                >
+                    <DeleteIcon />
+                </IconButton>
+            </div>
+            <List component="nav" aria-label="main mailbox folders" className={styles.clientMenu}>
+                {items.map((item) =>
+                    <ListItemButton
+                        selected={item.identifier === current}
+                        onClick={(event) => {
+                            setView("header");
+                            setCurrent(item.identifier);
+                        }}
+                    >
+                        <ListItemIcon>
+                            {item.connection.disconnection ? (
+                                <LinkIcon
+                                    sx={{ color: "red", fontSize: "120%" }}
+                                />
+                            ) : (
+                                <LinkOffIcon
+                                    sx={{ color: "#87d068", fontSize: "120%" }}
+                                />
+                            )}
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={item.connection.connection.client.address}
+                            secondary={item.connection.connection.tail}
+                        />
+                    </ListItemButton>
+                )
+                }
+            </List>
+            {tab}
+        </div>
+    );
+};
 
 export default ClientList;

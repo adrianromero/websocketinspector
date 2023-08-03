@@ -1,21 +1,15 @@
-.ant-layout-header.wsheader {
-  color: unset;
-  background: unset;
-  padding: 0.5rem;
-}
-
 .wslogging {
-  margin: 0.5rem;
+    margin: 0.5rem;
 }
 
 .wsapptab {
-  height: 100%;
+    height: 100%;
 }
 
 .wsapptab .ant-tabs-content {
-  height: 100%;
+    height: 100%;
 }
 
 .wsapptab .ant-tabs-content > .ant-tabs-tabpane {
-  height: 100%;
+    height: 100%;
 }

@@ -89,7 +89,7 @@ async fn start_server(
             .and(warp::path::tail())
             .and(warp::addr::remote())
             .and(warp::header::headers_cloned())
-            .and(warp::query::raw())
+            .and(warp::query::<HashMap<String, String>>())
             // The `ws()` filter will prepare Websocket handshake...
             .and(warp::ws())
             .and(client_connections_state)
@@ -97,10 +97,10 @@ async fn start_server(
                 move |tail: Tail,
                       address: Option<SocketAddr>,
                       headers: HeaderMap,
-                      query: String,
+                      query: HashMap<String, String>,
                       ws: Ws,
                       client_connections: ClientConnections| {
-                    println!("{} {:?}", query, headers);
+                    println!("{:?} / {:?}", tail, query);
                     let app_handle3 = app_handle2.clone();
                     ws.on_upgrade(move |socket| {
                         user_connected(
@@ -153,7 +153,7 @@ async fn start_server(
 async fn user_connected(
     app_handle: AppHandle,
     tail: Tail,
-    query: String,
+    query: HashMap<String, String>,
     headers: HeaderMap,
     address: Option<SocketAddr>,
     ws: WebSocket,

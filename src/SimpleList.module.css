@@ -1,0 +1,21 @@
+.list {
+    overflow: auto;
+    list-style-type: none;
+    padding-inline: 0;
+    border: 1px solid rgba(5, 5, 5, 0.1);
+    border-radius: 8px;
+    margin: 0;
+}
+
+.list.empty {
+    background: url(./images/nodata.svg);
+    background-position: center top;
+    background-repeat: no-repeat;
+}
+
+.listItem {
+    display: flex;
+    padding: 0.2rem 2rem 0.2rem 2rem;
+    border-bottom: 0.06rem solid rgba(5, 5, 5, 0.1);
+    background-color: white;
+}
