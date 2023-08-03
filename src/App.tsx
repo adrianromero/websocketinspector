@@ -158,7 +158,6 @@ const App: FC = () => {
                     </MenuItem>
                 </Menu>
 
-
                 <div className={styles.appview}>
                     {started && <route.Component path={path} />}
                     {clientstatus.name === "stopped" && <ServerForm />}
