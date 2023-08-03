@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use warp::ws::Message;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ServerStatus {
-    pub name: String,
-    pub address: Option<SocketAddr>,
-}
+// #[derive(Serialize, Deserialize, Clone, Debug)]
+// pub struct ServerStatus {
+//     pub name: String,
+//     pub address: Option<SocketAddr>,
+// }
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConnectMessage {
     pub client: Client,

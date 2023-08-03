@@ -13,10 +13,6 @@ import CloseDialog, { useCloseDialog } from "./CloseDialog";
 import { invoke } from "@tauri-apps/api";
 import LoggingEvents from "./LoggingEvents";
 
-export type ServerStatusProps = {
-    name: string;
-};
-
 const ClientMessages: FC<{ path?: string }> = ({ path }) => {
     const dispatch = useAppDispatch();
     const identifier = Number(path);

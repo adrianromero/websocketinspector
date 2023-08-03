@@ -5,18 +5,16 @@ import {
     Button,
     Dialog,
     DialogActions,
-    DialogContent,
-    Backdrop,
-    CircularProgress
+    DialogContent
 } from "@mui/material";
 import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
 import WarningIcon from "@mui/icons-material/Warning";
 
 import {
-    setClientStatus, selectClientStatus, selectServerStatus
+    setClientStatus
 } from "./features/websocketSlice";
 import AlertDialog, { useAlertDialog } from "./AlertDialog";
-import { useAppSelector, useAppDispatch } from "./app/hooks";
+import { useAppDispatch } from "./app/hooks";
 import styles from "./ServerForm.module.css";
 
 export type ErrorStatus = {
@@ -32,14 +30,6 @@ const ServerForm: FC = () => {
         content: " ",
     });
     const dispatch = useAppDispatch();
-    const serverstatus = useAppSelector(selectServerStatus);
-    const clientstatus = useAppSelector(selectClientStatus);
-    const listening = Boolean(serverstatus.address) && clientstatus === "started";
-    const stopped = serverstatus.name === "stopped" && clientstatus === "stopped";
-
-    if (listening) {
-        return null;
-    }
 
     const showError = (content: string) => {
         setAddressError({ error: true, content });
@@ -56,16 +46,12 @@ const ServerForm: FC = () => {
                 open={true}
                 hideBackdrop
             >
-                <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={!stopped} >
-                    <CircularProgress color="inherit" />
-                </Backdrop>
                 <DialogContent className={styles.formcontent}>
                     <TextField
                         required
                         id="outlined-required"
                         label="Address"
                         size="small"
-                        disabled={!stopped}
                         error={addressError.error}
                         helperText={addressError.content}
                         value={address}
@@ -81,19 +67,23 @@ const ServerForm: FC = () => {
                     <Button
                         variant="contained"
                         startIcon={<PlayCircleFilledIcon />}
-                        disabled={addressError.error || !stopped}
+                        disabled={addressError.error}
                         onClick={(event: React.MouseEvent<HTMLElement>) => {
-                            dispatch(setClientStatus("started"));
-                            invoke("start_server", { address }).catch(e => {
-                                dispatch(setClientStatus("stopped"));
-                                openAlertDialog({
-                                    title: "Start service",
-                                    icon: (
-                                        <WarningIcon color="warning" fontSize="large" />
-                                    ),
-                                    content: e as string,
+                            dispatch(setClientStatus({ name: "starting" }));
+                            invoke("start_server", { address })
+                                .then(address => {
+                                    dispatch(setClientStatus({ name: "started", address: address as string }));
+                                })
+                                .catch(e => {
+                                    dispatch(setClientStatus({ name: "stopped", address: undefined }));
+                                    openAlertDialog({
+                                        title: "Start service",
+                                        icon: (
+                                            <WarningIcon color="warning" fontSize="large" />
+                                        ),
+                                        content: e as string,
+                                    });
                                 });
-                            });
                         }}
                     >
                         Start

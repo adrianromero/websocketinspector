@@ -6,7 +6,7 @@ import ServerForm from "./ServerForm";
 
 import WebsocketListener from "./features/WebsocketListener";
 import {
-    setClientStatus, selectServerStatus, selectClientStatus
+    setClientStatus, selectClientStatus
 } from "./features/websocketSlice";
 import { View, getRoute, selectTitle } from "./features/uiSlice";
 import { selectAddress, navigate } from "./features/uiSlice";
@@ -26,14 +26,14 @@ import { useAppSelector, useAppDispatch } from "./app/hooks";
 import { Divider, ListItemText, MenuItem } from "@mui/material";
 import { Logout } from "@mui/icons-material";
 import styles from "./App.module.css";
+import ServerBackdrop from "./ServerBackdrop";
 
 
 const App: FC = () => {
 
     const dispatch = useAppDispatch();
-    const serverstatus = useAppSelector(selectServerStatus);
     const clientstatus = useAppSelector(selectClientStatus);
-    const listening = Boolean(serverstatus.address) && clientstatus === "started";
+    const started = clientstatus.name === "started";
     const title = useAppSelector(selectTitle);
     const { view, path } = useAppSelector(selectAddress);
     const route = getRoute(view);
@@ -49,12 +49,13 @@ const App: FC = () => {
     const handleDisconnect = () => {
         setAnchorEl(null);
         dispatch(navigate({ view: "clients" }));
-        dispatch(setClientStatus("stopped"));
+        dispatch(setClientStatus({ name: "stopping" }));
 
-        invoke("stop_server").catch(e => {
-            dispatch(setClientStatus("started"));
+        invoke("stop_server").then(() => {
+            dispatch(setClientStatus({ name: "stopped", address: undefined }));
+        }).catch(e => {
+            dispatch(setClientStatus({ name: "started" }));
         });
-
     };
     const handleView = (view: View) => () => {
         dispatch(navigate({ view }));
@@ -85,18 +86,18 @@ const App: FC = () => {
                             edge="start"
                             color="inherit"
                             aria-label="menu"
-                            disabled={!listening}
+                            disabled={!started}
                             sx={{ mr: 2 }}
                             onClick={handleClick}
                         >
                             <MenuIcon />
                         </IconButton>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            {serverstatus.name === "started" ? (route.label + (title ? ` - ${title}` : "")) : "Service settings"}
+                            {started ? (route.label + (title ? ` - ${title}` : "")) : "Websockets service"}
                         </Typography>
-                        {listening &&
+                        {started &&
                             <Typography variant="body2">
-                                {`Listening on ${serverstatus.address}`}
+                                {`Listening on ${clientstatus.address}`}
                             </Typography>
                         }
                     </Toolbar>
@@ -158,15 +159,12 @@ const App: FC = () => {
                 </Menu>
 
 
-                <div className="wsheader">
-                    <ServerForm />
+                <div className={styles.appview}>
+                    {started && <route.Component path={path} />}
+                    {clientstatus.name === "stopped" && <ServerForm />}
+                    {clientstatus.name === "starting" && <ServerBackdrop title="Starting..." />}
+                    {clientstatus.name === "stopping" && <ServerBackdrop title="Stopping..." />}
                 </div>
-                {
-                    serverstatus.name === "started" &&
-                    <div className={styles.appview} >
-                        <route.Component path={path} />
-                    </div>
-                }
             </div>
         </>
     );

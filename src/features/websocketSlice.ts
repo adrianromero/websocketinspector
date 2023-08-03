@@ -1,12 +1,10 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../app/store";
 
-export type ServerStatus = {
-    name: "started" | "stopped";
-    address: string | null;
+export type ClientStatus = {
+    name: "started" | "starting" | "stopped" | "stopping";
+    address?: string;
 };
-
-export type ClientStatus = "started" | "stopped";
 
 export type Client = {
     identifier: number;
@@ -70,15 +68,13 @@ export type Connection = {
 
 export interface WebsocketState {
     clientstatus: ClientStatus;
-    serverstatus: ServerStatus;
     connections: Map<number, Connection>;
     clientlog: LogEvent[];
     clientlogactive: boolean;
 }
 
 const initialState: WebsocketState = {
-    clientstatus: "stopped",
-    serverstatus: { name: "stopped", address: null },
+    clientstatus: { name: "stopped" },
     connections: new Map<number, Connection>(),
     clientlog: [],
     clientlogactive: true,
@@ -96,14 +92,7 @@ export const websocketSlice = createSlice({
             state.clientlogactive = !state.clientlogactive;
         },
         setClientStatus: (state, action: PayloadAction<ClientStatus>) => {
-            state.clientstatus = action.payload;
-        },
-        // Server side dispatch actions
-        setServerStatus: (state, action: PayloadAction<ServerStatus>) => {
-            state.serverstatus = action.payload;
-            state.connections = new Map<number, Connection>();
-            state.clientlog = [];
-            state.clientlogactive = true;
+            state.clientstatus = { ...state.clientstatus, ...action.payload };
         },
         openConnection: (state, action: PayloadAction<Request>) => {
             const now = new Date();
@@ -180,7 +169,6 @@ export const websocketSlice = createSlice({
 
 export const {
     setClientStatus,
-    setServerStatus,
     openConnection,
     closeConnection,
     receiveMessage,
@@ -192,8 +180,6 @@ export const {
 // the state. Selectors can also be defined inline where they're used instead of
 // in the slice file. For example: `useSelector((state: RootState) => state.counter.value)`
 export const selectWebsocket = (state: RootState) => state.websocket;
-export const selectServerStatus = (state: RootState) =>
-    state.websocket.serverstatus;
 export const selectClientStatus = (state: RootState) =>
     state.websocket.clientstatus;
 export const selectWebsocketConnections = (state: RootState) =>

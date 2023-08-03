@@ -149,17 +149,6 @@ async fn start_server(
                     client_connections,
                 });
                 start_rx.await.unwrap();
-                println!("Server Started bind terminated");
-
-                app_handle
-                    .emit_all(
-                        "server_status",
-                        server::ServerStatus {
-                            name: String::from("started"),
-                            address: Some(socketaddress),
-                        },
-                    )
-                    .unwrap();
 
                 return Ok(result_socketaddress);
             }
@@ -255,10 +244,7 @@ async fn user_connected(
 }
 
 #[tauri::command]
-async fn stop_server(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, TauriState>,
-) -> Result<(), ServerError> {
+async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerError> {
     let mut srv = state.write().await;
 
     let mystate = std::mem::replace(&mut *srv, None);
@@ -270,15 +256,6 @@ async fn stop_server(
     {
         stop_tx.send(()).unwrap();
         handle.await.unwrap();
-        app_handle
-            .emit_all(
-                "server_status",
-                server::ServerStatus {
-                    name: String::from("stopped"),
-                    address: None,
-                },
-            )
-            .unwrap();
         return Ok(());
     }
 

@@ -9,11 +9,6 @@ import scroll from "./Scroll.module.css";
 import { Fab } from "@mui/material";
 import { navigate, setTitle } from "./features/uiSlice";
 
-
-export type ServerStatusProps = {
-    name: string;
-};
-
 const ClientInfo: FC<{ path?: string }> = ({ path }) => {
     const dispatch = useAppDispatch();
     const identifier = Number(path);
