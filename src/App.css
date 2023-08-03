@@ -1,3 +1,9 @@
-.App{
-    padding:0.5rem;
+.ant-layout-header.wsheader {
+  color: unset;
+  background: unset;
+  padding: 0.5rem;
+}
+
+.wslogging {
+  margin: 0.5rem;
 }

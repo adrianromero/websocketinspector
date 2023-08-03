@@ -4,16 +4,16 @@
 )]
 
 use futures_util::{SinkExt, StreamExt};
+use serde::{Serialize, Serializer};
 use std::collections::HashMap;
-use std::net::SocketAddr;
+use std::net::{AddrParseError, SocketAddr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::{AppHandle, Manager};
+use thiserror::Error;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
 use warp::path::Tail;
 use warp::ws::{Message, WebSocket, Ws};
 use warp::Filter;
@@ -34,8 +34,7 @@ fn main() {
     tauri::Builder::default()
         .manage(RwLock::new(None::<ServerState>))
         .invoke_handler(tauri::generate_handler![
-            my_function,
-            my_other_function,
+            check_server,
             start_server,
             stop_server
         ])
@@ -43,38 +42,44 @@ fn main() {
         .expect("Error while running WebSocket inspector");
 }
 
-#[tauri::command]
-async fn my_other_function() {
-    println!("I was invoked asynchronously from JS!");
-    sleep(Duration::from_millis(5000)).await;
-    println!("I am returning asynchronously to JS!");
+#[derive(Error, Debug)]
+pub enum ServerError {
+    #[error("AddressError: {0}")]
+    AddressError(#[from] AddrParseError),
+    #[error("BindError: {0}")]
+    BindError(String),
+}
+impl Serialize for ServerError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            ServerError::AddressError(e) => serializer.serialize_str(&e.to_string()),
+            ServerError::BindError(ref s) => serializer.serialize_str(s),
+        }
+    }
 }
 
 #[tauri::command]
-fn my_function(app_handle: tauri::AppHandle) {
-    app_handle
-        .emit_all(
-            "server_status",
-            String::from("I was invoked synchronously from JS!"),
-        )
-        .unwrap();
+async fn check_server(address: String) -> Result<SocketAddr, ServerError> {
+    Ok(address.parse::<SocketAddr>()?)
 }
 
 #[tauri::command]
 async fn start_server(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, TauriState>,
-) -> Result<(), ()> {
+    address: String,
+) -> Result<(), ServerError> {
     println!("Start server process");
+
+    let socketaddress = address.parse::<SocketAddr>()?;
 
     let mut srv = state.write().await;
     let mystate = std::mem::replace(&mut *srv, None);
 
     if let None = mystate {
-        app_handle
-            .emit_all("server_status", server::ServerStatus::Starting)
-            .unwrap();
-
         NEXT_USER_ID.store(1, Ordering::Relaxed);
         let client_connections = Arc::new(RwLock::new(HashMap::new()));
         let client_connections_state = warp::any().map(move || client_connections.clone());
@@ -104,24 +109,39 @@ async fn start_server(
 
         let (tx, rx) = oneshot::channel::<()>();
         let app_handle2 = app_handle.clone();
-        let (_, server) = warp::serve(index.or(chat)).bind_with_graceful_shutdown(
-            ([127, 0, 0, 1], 3030),
+        let result = warp::serve(index.or(chat)).try_bind_with_graceful_shutdown(
+            socketaddress,
             async move {
                 app_handle2
-                    .emit_all("server_status", server::ServerStatus::Started)
+                    .emit_all(
+                        "server_status",
+                        server::ServerStatus {
+                            key: String::from("started"),
+                        },
+                    )
                     .unwrap();
                 drop(app_handle2);
                 rx.await.unwrap();
             },
         );
 
-        let handle = tokio::task::spawn(server);
-        *srv = Some(ServerState { handle, tx });
-    } else {
-        println!("Server: No Server to start");
-        *srv = mystate;
+        match result {
+            Ok((_, server)) => {
+                let handle = tokio::task::spawn(server);
+                *srv = Some(ServerState { handle, tx });
+            }
+            Err(e) => {
+                *srv = mystate;
+                return Err(ServerError::BindError(e.to_string()));
+            }
+        }
+        return Ok(());
     }
-    Ok(())
+
+    *srv = mystate;
+    Err(ServerError::BindError(String::from(
+        "Server already started",
+    )))
 }
 
 async fn user_connected(
@@ -159,8 +179,7 @@ async fn user_connected(
         println!("received {:?}", msg);
         let message = server::ClientMessage {
             identifier,
-            message_type: getMessageType(&msg),
-            payload: msg.into_bytes(),
+            message: server::MessageType::from(msg),
         };
         app_handle.emit_all("client_message", &message).unwrap();
 
@@ -180,25 +199,6 @@ async fn user_connected(
         .unwrap();
 }
 
-fn getMessageType(msg: &Message) -> server::MessageType {
-    if msg.is_text() {
-        return server::MessageType::TEXT;
-    }
-    if msg.is_binary() {
-        return server::MessageType::BINARY;
-    }
-    if msg.is_ping() {
-        return server::MessageType::PING;
-    }
-    if msg.is_pong() {
-        return server::MessageType::PONG;
-    }
-    if msg.is_close() {
-        return server::MessageType::CLOSE;
-    }
-    return server::MessageType::FRAME;
-}
-
 #[tauri::command]
 async fn stop_server(
     app_handle: tauri::AppHandle,
@@ -210,13 +210,15 @@ async fn stop_server(
 
     let mystate = std::mem::replace(&mut *srv, None);
     if let Some(ServerState { handle, tx }) = mystate {
-        app_handle
-            .emit_all("server_status", server::ServerStatus::Stopping)
-            .unwrap();
         tx.send(()).unwrap();
         handle.await.unwrap();
         app_handle
-            .emit_all("server_status", server::ServerStatus::Stopped)
+            .emit_all(
+                "server_status",
+                server::ServerStatus {
+                    key: String::from("stopped"),
+                },
+            )
             .unwrap();
     } else {
         println!("Server: No Server to stop");
