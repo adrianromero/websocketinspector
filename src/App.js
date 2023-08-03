@@ -7,6 +7,12 @@ function App() {
     invoke("my_function");
     invoke("my_other_function").then(() => invoke("my_function"));
   };
+  const doStart = () => {
+    invoke("start_server").then(() => alert("started"));
+  };
+  const doStop = () => {
+    invoke("stop_server").then(() => alert("started"));
+  };
   return (
     <div className="App">
       <header className="App-header">
@@ -23,6 +29,8 @@ function App() {
           Learn React
         </a>
         <button onClick={doClick}>Press me now</button>
+        <button onClick={doStart}>Start Server</button>
+        <button onClick={doStop}>Stop Server</button>
       </header>
     </div>
   );
