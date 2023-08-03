@@ -6,21 +6,17 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import { green, red, blue } from '@mui/material/colors';
-import {
-    selectClientLog,
-} from "./features/websocketSlice";
-
-import { useAppSelector } from "./app/hooks";
-import React from "react";
+import type { LogEvent } from "./features/websocketSlice"
 
 export type LoggingEventsProps = {
     className?: string;
+    clientlog: LogEvent[];
+    displayaddress?: boolean;
 
 };
 const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
 
-    const { className } = props;
-    const clientlog = useAppSelector(selectClientLog);
+    const { className, clientlog, displayaddress = false } = props;
 
     const listRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -35,14 +31,15 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
                     const { kind, time, payload } = item;
                     let label: string;
                     let icon: ReactNode;
+                    const address = displayaddress ? ` ${payload.client.address}` : "";
 
                     let paragraph;
                     if (kind === "connect") {
-                        label = "CONNECT " + payload.client.address;
+                        label = "CONNECT" + address;
                         icon = <Avatar sx={{ bgcolor: green[500], height: 24, width: 24 }} ><LinkIcon sx={{ fontSize: 16 }} /></Avatar>;
                         paragraph = "/" + payload.tail;
                     } else if (kind === "disconnect") {
-                        label = "DISCONNECT " + payload.client.address;
+                        label = "DISCONNECT" + address;
                         icon = <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>;
                         let text: string = payload.message
                             ? `${payload.message.code}: ${payload.message.reason}`
@@ -54,13 +51,13 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
                             ? <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallReceivedIcon sx={{ fontSize: 16 }} /></Avatar>
                             : <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallMadeIcon sx={{ fontSize: 16 }} /></Avatar>;
                         if ("TEXT" in payload.message) {
-                            label = "TEXT " + payload.client.address;
+                            label = "TEXT" + address;
                             text = payload.message.TEXT.msg;
                         } else if ("BINARY" in payload.message) {
-                            label = "BINARY " + payload.client.address;
+                            label = "BINARY" + address;
                             text = "BASE64"; // payload.message.BINARY.msg;
                         } else {
-                            label = "UNKNOWN " + payload.client.address;
+                            label = "UNKNOWN" + address;
                             text = "";
                         }
                         paragraph = text

@@ -9,7 +9,6 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { selectWebsocketConnections } from "./features/websocketSlice";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 
-import styles from "./ClientList.module.css";
 import scroll from "./Scroll.module.css";
 import { navigate } from "./features/uiSlice";
 
@@ -25,7 +24,7 @@ const ClientList: FC = () => {
                 <List sx={{ bgcolor: 'background.paper' }} dense disablePadding>
                     {items.map((item) => {
                         const { connection } = item;
-                        const connectionTime = connection.time;
+                        const connectionTime = connection.request.time;
                         return <>
                             <ListItem alignItems="flex-start"
                                 secondaryAction={
@@ -46,17 +45,25 @@ const ClientList: FC = () => {
                                     )}
                                 </ListItemAvatar>
                                 <ListItemText
-                                    primary={connection.request.client.address}
-                                    secondary={connection.request.tail}
+                                    primary={connection.request.payload.client.address}
+                                    secondary={<Typography
+                                        sx={{
+                                            whiteSpace: "nowrap",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis"
+                                        }}
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >/{connection.request.payload.tail}</Typography>}
                                 />
-                                <div style={{ "marginRight": "1rem" }}>
-                                    <Typography variant="body2" noWrap align="right" sx={{ width: 350, color: 'text.secondary' }}>
+                                <div style={{ "marginRight": "1rem", width: "22rem" }}>
+                                    <Typography variant="body2" noWrap align="right" sx={{ color: 'text.secondary' }}>
                                         {connectionTime.toLocaleString()} - {connection.disconnection ? connection.disconnection.time.toLocaleString() : "..."}
                                     </Typography>
-                                    <Typography variant="body2" noWrap sx={{ width: 150, color: 'text.secondary' }}>
+                                    <Typography variant="body2" noWrap sx={{ marginLeft: "8rem", color: 'text.secondary' }}>
                                         Received messages: {connection.messages.filter(m => m.payload.direction === "CLIENT").length}
                                     </Typography>
-                                    <Typography variant="body2" noWrap sx={{ width: 150, color: 'text.secondary' }}>
+                                    <Typography variant="body2" noWrap sx={{ marginLeft: "8rem", color: 'text.secondary' }}>
                                         Sent messages: {connection.messages.filter(m => m.payload.direction === "SERVER").length}
                                     </Typography>
                                 </div>

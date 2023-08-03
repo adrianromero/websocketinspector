@@ -1,14 +1,11 @@
-import React from "react";
-import { FC } from "react";
+import { FC, useState } from "react";
 import { invoke } from "@tauri-apps/api";
 import {
     TextField,
     Button,
     Dialog,
     DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
+    DialogContent
 } from "@mui/material";
 import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
 import WarningIcon from "@mui/icons-material/Warning";
@@ -17,6 +14,7 @@ import SyncIcon from "@mui/icons-material/Sync";
 import {
     setClientStatus, selectClientStatus, selectServerStatus
 } from "./features/websocketSlice";
+import AlertDialog, { useAlertDialog } from "./AlertDialog";
 import { useAppSelector, useAppDispatch } from "./app/hooks";
 import styles from "./ServerForm.module.css";
 
@@ -25,23 +23,10 @@ export type ErrorStatus = {
     content: string;
 };
 
-export type DialogStatus = {
-    open: boolean;
-    icon?: JSX.Element;
-    title?: string;
-    content?: string;
-};
-
-export type DialogValues = {
-    icon?: JSX.Element;
-    title?: string;
-    content?: string;
-};
-
 const ServerForm: FC = () => {
-    const [dialog, setDialog] = React.useState<DialogStatus>({ open: false });
-    const [address, setAddress] = React.useState("127.0.0.1:3030");
-    const [addressError, setAddressError] = React.useState<ErrorStatus>({
+    const [alertDialogProperties, { openAlertDialog }] = useAlertDialog();
+    const [address, setAddress] = useState("127.0.0.1:3030");
+    const [addressError, setAddressError] = useState<ErrorStatus>({
         error: false,
         content: " ",
     });
@@ -54,14 +39,6 @@ const ServerForm: FC = () => {
     if (listening) {
         return null;
     }
-
-    const openDialog = (values: DialogValues) => {
-        setDialog({ open: true, ...values });
-    };
-
-    const closeDialog = () => {
-        setDialog({ open: false });
-    };
 
     const showError = (content: string) => {
         setAddressError({ error: true, content });
@@ -82,8 +59,8 @@ const ServerForm: FC = () => {
                     dispatch(setClientStatus("started"));
                     invoke("start_server", { address }).catch(e => {
                         dispatch(setClientStatus("stopped"));
-                        openDialog({
-                            title: "Start server",
+                        openAlertDialog({
+                            title: "Start service",
                             icon: (
                                 <WarningIcon color="warning" fontSize="large" />
                             ),
@@ -92,68 +69,46 @@ const ServerForm: FC = () => {
                     });
                 }}
             >
-                Start listening
+                Start
             </Button>
         );
     } else {
         button = (
             <Button variant="contained" startIcon={<SyncIcon />} disabled>
-                Start listening
+                Start
             </Button>
         );
     }
 
     return (
         <>
-            <div
-                className={styles.serverformcontainer}
-            >
-                <TextField
-                    required
-                    id="outlined-required"
-                    label="Address"
-                    size="small"
-                    disabled={serverstatus.name !== "stopped"}
-                    error={addressError.error}
-                    helperText={addressError.content}
-                    value={address}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                        invoke("check_server", { address: event.target.value })
-                            .then(() => hideError())
-                            .catch(exception => showError(exception as string));
-
-                        setAddress(event.target.value);
-                    }}
-                />
-                <div>
-                    {button}
-                </div>
-            </div>
             <Dialog
-                open={dialog.open}
-                onClose={closeDialog}
-                aria-labelledby={dialog.title}
-                aria-describedby={dialog.content}
+                open={true}
+                hideBackdrop
             >
-                <DialogTitle>{dialog.title}</DialogTitle>
-                <DialogContent>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
+                <DialogContent className={styles.formcontent}>
+                    <TextField
+                        required
+                        id="outlined-required"
+                        label="Address"
+                        size="small"
+                        disabled={serverstatus.name !== "stopped"}
+                        error={addressError.error}
+                        helperText={addressError.content}
+                        value={address}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                            invoke("check_server", { address: event.target.value })
+                                .then(() => hideError())
+                                .catch(exception => showError(exception as string));
+                            setAddress(event.target.value);
                         }}
-                    >
-                        {dialog.icon}
-                        <DialogContentText>{dialog.content}</DialogContentText>
-                    </div>
+                    />
                 </DialogContent>
                 <DialogActions>
-                    <Button variant="contained" onClick={closeDialog} autoFocus>
-                        OK
-                    </Button>
+                    {button}
                 </DialogActions>
             </Dialog>
+            <AlertDialog {...alertDialogProperties} />
         </>
     );
 };

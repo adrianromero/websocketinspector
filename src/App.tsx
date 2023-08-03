@@ -25,7 +25,7 @@ import { useAppSelector, useAppDispatch } from "./app/hooks";
 
 import { Divider, ListItemText, MenuItem } from "@mui/material";
 import { Logout } from "@mui/icons-material";
-import "./App.css";
+import styles from "./App.module.css";
 
 
 const App: FC = () => {
@@ -92,7 +92,7 @@ const App: FC = () => {
                             <MenuIcon />
                         </IconButton>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            {serverstatus.name === "started" ? (route.label + (title ? ` - ${title}` : "")) : "Listener configuration"}
+                            {serverstatus.name === "started" ? (route.label + (title ? ` - ${title}` : "")) : "Service settings"}
                         </Typography>
                         {listening &&
                             <Typography variant="body2">
@@ -153,7 +153,7 @@ const App: FC = () => {
                         <ListItemIcon>
                             <Logout fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Stop listening</ListItemText>
+                        <ListItemText>Stop service</ListItemText>
                     </MenuItem>
                 </Menu>
 
@@ -163,15 +163,7 @@ const App: FC = () => {
                 </div>
                 {
                     serverstatus.name === "started" &&
-                    <div
-                        className="wslogging"
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "stretch",
-                            flexGrow: 1,
-                        }}
-                    >
+                    <div className={styles.appview} >
                         <route.Component path={path} />
                     </div>
                 }

@@ -6,7 +6,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import {
-    clearClientLog, toggleClientLogActive, selectClientLogActive,
+    clearClientLog, toggleClientLogActive, selectClientLogActive, selectClientLog
 } from "./features/websocketSlice";
 import { useAppSelector, useAppDispatch } from "./app/hooks";
 
@@ -16,13 +16,14 @@ const LoggingList: FC = () => {
 
     const dispatch = useAppDispatch();
     const clientlogactive = useAppSelector(selectClientLogActive);
+    const clientlog = useAppSelector(selectClientLog);
 
     const onClear = () => dispatch(clearClientLog());
     const onPause = () => dispatch(toggleClientLogActive());
 
     return (
         <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
-            <LoggingEvents className={scroll.scrolllist} />
+            <LoggingEvents className={scroll.scrolllist} clientlog={clientlog} displayaddress />
             <div className={scroll.toolbar}>
                 <Fab color="default"
                     size="medium"

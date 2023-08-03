@@ -63,8 +63,7 @@ export type LogEvent =
     | LogEventMessage;
 
 export type Connection = {
-    request: Request;
-    time: Date;
+    request: LogEventRequest;
     messages: LogEventMessage[];
     disconnection?: LogEventDisconnection;
 };
@@ -109,8 +108,11 @@ export const websocketSlice = createSlice({
         openConnection: (state, action: PayloadAction<Request>) => {
             const now = new Date();
             state.connections.set(action.payload.client.identifier, {
-                request: action.payload,
-                time: now,
+                request: {
+                    kind: "connect",
+                    time: now,
+                    payload: action.payload,
+                },
                 messages: [],
             });
             // Logging

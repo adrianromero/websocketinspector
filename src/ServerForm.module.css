@@ -1,17 +1,5 @@
-.serverformcontainer {
-    padding: 2.5rem 5rem 1.5rem 5rem;
-}
-
-.serverformstatus {
-    text-align: right;
-}
-
-.serverformlabel {
-    text-align: end;
-}
-
-.serverformlabel > label {
-    display: inline-flex;
-    align-items: center;
-    height: 32px;
+:global(.MuiDialogContent-root).formcontent {
+    padding-top: 50px;
+    padding-left: 50px;
+    padding-right: 50px;
 }

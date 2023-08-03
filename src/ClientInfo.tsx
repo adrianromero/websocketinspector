@@ -1,12 +1,14 @@
 import { FC, useEffect } from "react";
 import Typography from '@mui/material/Typography';
-import { Connection, selectWebsocketConnection } from "./features/websocketSlice";
+import { selectWebsocketConnection } from "./features/websocketSlice";
+import type { Request, Connection } from "./features/websocketSlice"
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import styles from "./ClientInfo.module.css";
 import scroll from "./Scroll.module.css";
 import { Fab } from "@mui/material";
 import { navigate, setTitle } from "./features/uiSlice";
+
 
 export type ServerStatusProps = {
     name: string;
@@ -17,35 +19,37 @@ const ClientInfo: FC<{ path?: string }> = ({ path }) => {
     const identifier = Number(path);
     const connection: Connection | undefined = useAppSelector(selectWebsocketConnection(identifier));
 
+    const requestpayload: Request | undefined = connection?.request.payload;
+
     useEffect(() => {
-        if (connection) {
-            dispatch(setTitle(String(connection.request.client.address)));
+        if (requestpayload) {
+            dispatch(setTitle(String(requestpayload.client.address)));
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    if (!connection) {
+    if (!requestpayload) {
         throw new Error();
     }
 
     return (
         <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
             <div className={scroll.scrolllist + " " + styles.infocontent}>
-                <Typography>Client information</Typography>
+                <Typography variant="h6" >Client information</Typography>
                 <div>
                     <span className={styles.infolabel}>Address: </span>
-                    <span>{connection.request.client.address}</span>
+                    <span>{requestpayload.client.address}</span>
                 </div>
                 <div>
                     <span className={styles.infolabel}>Path: </span>
-                    <span>/{connection.request.tail}</span>
+                    <span>/{requestpayload.tail}</span>
                 </div>
                 <div>
                     <span className={styles.infolabel}>Query: </span>
-                    <span>{JSON.stringify(connection.request.query)}</span>
+                    <span>{JSON.stringify(requestpayload.query)}</span>
                 </div>
-                <Typography>Headers</Typography>
-                {Array.from(Object.entries(connection.request.headers)).map(
+                <Typography variant="h6" >Headers</Typography>
+                {Array.from(Object.entries(requestpayload.headers)).map(
                     ([key, value]) => {
                         return (
                             <div>

@@ -1,0 +1,8 @@
+.appview {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex-grow: 1;
+    gap: 0.5rem;
+    margin: 0.5rem;
+}
