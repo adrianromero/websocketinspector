@@ -1,11 +1,11 @@
 [package]
-name = "app"
+name = "websocketinspector"
 version = "0.1.0"
-description = "A Tauri App"
+description = "WebSocket Inspector"
 authors = ["you"]
 license = ""
 repository = ""
-default-run = "app"
+default-run = "websocketinspector"
 edition = "2021"
 rust-version = "1.59"
 
@@ -22,6 +22,8 @@ tokio = { version = "1.25.0", features = ["full"] }
 warp = "0.3.3"
 futures-util = "0.3.25"
 thiserror = "1.0.40"
+log = "0.4.19"
+env_logger = "0.10.0"
 
 [features]
 # by default Tauri runs in production mode

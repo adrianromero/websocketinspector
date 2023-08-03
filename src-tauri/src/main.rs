@@ -20,6 +20,7 @@
 )]
 
 use futures_util::{SinkExt, StreamExt};
+use log::{info, warn};
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::net::{AddrParseError, SocketAddr};
@@ -55,6 +56,7 @@ pub struct ClientConnection {
 type ClientConnections = Arc<RwLock<HashMap<usize, ClientConnection>>>;
 
 fn main() {
+    env_logger::init();
     tauri::Builder::default()
         .manage(RwLock::new(None::<ServerState>))
         .invoke_handler(tauri::generate_handler![
@@ -98,7 +100,7 @@ async fn start_server(
     state: tauri::State<'_, TauriState>,
     address: String,
 ) -> Result<SocketAddr, ServerError> {
-    println!("Start server process");
+    info!("Start server process");
 
     let socketaddress = address.parse::<SocketAddr>()?;
 
@@ -126,7 +128,7 @@ async fn start_server(
                       query: HashMap<String, String>,
                       ws: Ws,
                       client_connections: ClientConnections| {
-                    println!("{:?} / {:?}", tail, query);
+                    info!("{:?} / {:?}", tail, query);
                     let app_handle3 = app_handle2.clone();
                     ws.on_upgrade(move |socket| {
                         user_connected(
@@ -158,7 +160,7 @@ async fn start_server(
                 client_connection.tx.send(Message::close()).unwrap();
             }
 
-            println!("Bind signal finished.");
+            info!("Bind signal finished.");
         });
 
         match result {
@@ -201,7 +203,7 @@ async fn user_connected(
     tokio::task::spawn(async move {
         while let Some(message) = rx.recv().await {
             user_ws_tx.send(message).await.unwrap_or_else(|e| {
-                eprintln!("websocket send error: {}", e);
+                warn!("websocket send error: {}", e);
             });
         }
     });
@@ -235,11 +237,11 @@ async fn user_connected(
         let msg = match result {
             Ok(msg) => msg,
             Err(e) => {
-                eprintln!("websocket error: {}", e);
+                warn!("websocket error: {}", e);
                 break;
             }
         };
-        println!("received {:?}", msg); // Close(None)
+        info!("received {:?}", msg); // Close(None)
         if msg.is_close() {
             let disconnect = server::DisconnectMessage {
                 client: client.clone(),
@@ -277,7 +279,7 @@ async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerEr
     {
         stop_tx.send(()).unwrap();
         handle.await.unwrap();
-        println!("Server stopped");
+        info!("Server stopped");
         return Ok(());
     }
 
@@ -308,10 +310,10 @@ async fn close_client(
         {
             tx.send(Message::close_with(status, reason)).unwrap();
         } else {
-            println!("Client not found");
+            warn!("Client not found");
         }
     } else {
-        println!("Server: No Server to stop");
+        warn!("Server: No Server to stop");
     }
 
     Ok(())
@@ -336,7 +338,7 @@ async fn send_text(
             tx,
         }) = client_connections.read().await.get(&identifier)
         {
-            println!("Sending {}", &text);
+            info!("Sending {}", &text);
             let msg = Message::text(text);
             tx.send(msg.clone()).unwrap();
 
@@ -351,10 +353,10 @@ async fn send_text(
             };
             app_handle.emit_all("client_message", &message).unwrap();
         } else {
-            println!("Client not found");
+            warn!("Client not found");
         }
     } else {
-        println!("Server: No Server to stop");
+        warn!("Server: No Server to stop");
     }
 
     Ok(())
