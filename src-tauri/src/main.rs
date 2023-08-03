@@ -58,7 +58,7 @@ type ClientConnections = Arc<RwLock<HashMap<usize, ClientConnection>>>;
 fn main() {
     env_logger::init();
     tauri::Builder::default()
-        .manage(RwLock::new(None::<ServerState>))
+        .manage(RwLock::new(Option::<ServerState>::default()))
         .invoke_handler(tauri::generate_handler![
             check_server,
             start_server,
@@ -67,7 +67,7 @@ fn main() {
             close_client,
         ])
         .run(tauri::generate_context!())
-        .expect("Error while running WebSocket inspector");
+        .expect("Error while running WebSocket Inspector");
 }
 
 #[derive(Error, Debug)]
@@ -105,7 +105,7 @@ async fn start_server(
     let socketaddress = address.parse::<SocketAddr>()?;
 
     let mut srv = state.write().await;
-    let mystate = std::mem::replace(&mut *srv, None);
+    let mystate = srv.as_mut();
 
     if let None = mystate {
         let client_connections = Arc::new(RwLock::new(HashMap::new()));
@@ -166,23 +166,20 @@ async fn start_server(
         match result {
             Ok((result_socketaddress, server)) => {
                 let handle = tokio::task::spawn(server);
+                start_rx.await.unwrap();
                 *srv = Some(ServerState {
                     handle,
                     stop_tx,
                     client_connections,
                 });
-                start_rx.await.unwrap();
-
                 return Ok(result_socketaddress);
             }
             Err(e) => {
-                *srv = mystate;
                 return Err(ServerError::BindError(e.to_string()));
             }
         }
     }
 
-    *srv = mystate;
     Err(ServerError::BindError(String::from(
         "Server already started",
     )))
@@ -207,7 +204,7 @@ async fn user_connected(
             });
         }
     });
-    //tx.send(Message::text(String::from("sdafasf"))).unwrap();
+
     let identifier = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
     let client_connection = ClientConnection {
         identifier,
@@ -269,8 +266,8 @@ async fn user_connected(
 #[tauri::command]
 async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerError> {
     let mut srv = state.write().await;
-
     let mystate = std::mem::replace(&mut *srv, None);
+
     if let Some(ServerState {
         handle,
         stop_tx,
@@ -279,6 +276,7 @@ async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerEr
     {
         stop_tx.send(()).unwrap();
         handle.await.unwrap();
+
         info!("Server stopped");
         return Ok(());
     }
@@ -296,11 +294,12 @@ async fn close_client(
     reason: String,
 ) -> Result<(), ()> {
     let mut srv = state.write().await;
+    let mystate = srv.as_mut();
     if let Some(ServerState {
         handle: _,
         stop_tx: _,
         client_connections,
-    }) = &mut *srv
+    }) = mystate
     {
         if let Some(ClientConnection {
             identifier: _,
@@ -326,11 +325,12 @@ async fn send_text(
     text: String,
 ) -> Result<(), ()> {
     let mut srv = state.write().await;
+    let mystate = srv.as_mut();
     if let Some(ServerState {
         handle: _,
         stop_tx: _,
         client_connections,
-    }) = &mut *srv
+    }) = mystate
     {
         if let Some(ClientConnection {
             identifier: _,
@@ -345,7 +345,6 @@ async fn send_text(
             let message = server::ClientMessage {
                 client: server::Client {
                     identifier,
-
                     address: address.clone(),
                 },
                 direction: server::Direction::SERVER,
