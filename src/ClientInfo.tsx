@@ -10,7 +10,7 @@ export type ServerStatusProps = {
 }
 
 const ClientInfo: FC<Connection> = (connection) => {
-    return <Collapse bordered={false} size="small" defaultActiveKey={['1', '2']}
+    return <Collapse bordered={false} size="small" defaultActiveKey={['1', '2', '3']}
         className="wsinfocollapse"
         style={{ overflow: "auto", width: "100%", border: "1px solid rgba(5,5,5,0.1)", borderRadius: "8px" }}>
         <Collapse.Panel header="Client information" key="1">
@@ -24,9 +24,10 @@ const ClientInfo: FC<Connection> = (connection) => {
 
             })}
         </Collapse.Panel>
-    </Collapse>
-        ;
-
+        <Collapse.Panel header="Messages" key="3">
+            {JSON.stringify(connection.messages)}
+        </Collapse.Panel>
+    </Collapse>;
 }
 
 export default ClientInfo;

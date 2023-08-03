@@ -17,12 +17,18 @@ export type BinaryMessage = {
 
 export type MessagePayload = {
     client: Client,
-    message: TextMessage | BinaryMessage,
+    message: TextMessage | BinaryMessage
+}
+
+export type MessageInfo = {
+    time: Date,
+    message: TextMessage | BinaryMessage
 }
 
 export type Connection = {
     connection: ClientConnectionPayload;
     time: Date;
+    messages: MessageInfo[],
     disconnection: {
         time: Date
         message: { code: number, reason: string } | null
@@ -36,6 +42,7 @@ const ClientList: FC = () => {
             setConnections(value => [...value, {
                 connection: event.payload as ClientConnectionPayload,
                 time: new Date(),
+                messages: [],
                 disconnection: null
             }]);
 
@@ -51,7 +58,13 @@ const ClientList: FC = () => {
 
         })
         const clientmessage = listen('client_message', (event) => {
-
+            const message = (event.payload as MessagePayload)
+            setConnections(value => value.map(c => {
+                if (c.connection.client.identifier === message.client.identifier) {
+                    return { ...c, messages: [...c.messages, { time: new Date(), message: message.message }] }
+                }
+                return c;
+            }));
         })
         return () => {
             clientconnect.then(f => f());

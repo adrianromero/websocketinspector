@@ -1,6 +1,6 @@
 import React from 'react';
 import type { FC } from 'react';
-import { Layout, Tabs } from 'antd';
+import { Layout, Segmented, Tabs } from 'antd';
 import type { TabsProps } from 'antd';
 import LoggingList from './LoggingList';
 import ServerForm from './ServerForm';
@@ -37,6 +37,18 @@ const App: FC = () => {
                 <ServerForm />
             </Layout.Header>
             <Layout.Content className="wslogging">
+                <Segmented
+                    options={[
+                        {
+                            label: "Log",
+                            value: 'log',
+                        },
+                        {
+                            label: "Clients",
+                            value: 'clients',
+                        },
+                    ]}
+                />
                 <Tabs defaultActiveKey="1" items={items} className="wsapptab"
                     style={{ height: "100%" }} />
             </Layout.Content>
