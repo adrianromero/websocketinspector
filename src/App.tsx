@@ -1,13 +1,28 @@
 import React from 'react';
 import type { FC } from 'react';
-import { Layout } from 'antd';
+import { Layout, Tabs } from 'antd';
+import type { TabsProps } from 'antd';
 import LoggingList from './LoggingList';
 import ServerForm from './ServerForm';
 import "./App.css";
+import ClientList from './ClientList';
 
 
 const App: FC = () => {
+    const items: TabsProps['items'] = [
+        {
+            key: '1',
+            label: "Log",
+            forceRender: true,
+            children: <LoggingList />,
+        },
+        {
+            key: '2',
+            label: "Clients", forceRender: true,
+            children: <ClientList />,
+        },
 
+    ];
     return (
         <Layout className="App" style={{
             height: '100vh',
@@ -22,7 +37,8 @@ const App: FC = () => {
                 <ServerForm />
             </Layout.Header>
             <Layout.Content className="wslogging">
-                <LoggingList />
+                <Tabs defaultActiveKey="1" items={items} className="wsapptab"
+                    style={{ height: "100%" }} />
             </Layout.Content>
         </Layout>
     );

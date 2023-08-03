@@ -14,6 +14,7 @@ use thiserror::Error;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
+use warp::http::HeaderMap;
 use warp::path::Tail;
 use warp::ws::{WebSocket, Ws};
 use warp::Filter;
@@ -80,7 +81,6 @@ async fn start_server(
     let mystate = std::mem::replace(&mut *srv, None);
 
     if let None = mystate {
-        NEXT_USER_ID.store(1, Ordering::Relaxed);
         let client_connections = Arc::new(RwLock::new(HashMap::new()));
         let client_connections_state = warp::any().map(move || client_connections.clone());
 
@@ -88,17 +88,30 @@ async fn start_server(
         let chat = warp::get()
             .and(warp::path::tail())
             .and(warp::addr::remote())
+            .and(warp::header::headers_cloned())
+            .and(warp::query::raw())
             // The `ws()` filter will prepare Websocket handshake...
             .and(warp::ws())
             .and(client_connections_state)
             .map(
                 move |tail: Tail,
                       address: Option<SocketAddr>,
+                      headers: HeaderMap,
+                      query: String,
                       ws: Ws,
                       client_connections: ClientConnections| {
+                    println!("{} {:?}", query, headers);
                     let app_handle3 = app_handle2.clone();
                     ws.on_upgrade(move |socket| {
-                        user_connected(app_handle3, tail, address, socket, client_connections)
+                        user_connected(
+                            app_handle3,
+                            tail,
+                            query,
+                            headers,
+                            address,
+                            socket,
+                            client_connections,
+                        )
                     })
                 },
             );
@@ -140,6 +153,8 @@ async fn start_server(
 async fn user_connected(
     app_handle: AppHandle,
     tail: Tail,
+    query: String,
+    headers: HeaderMap,
     address: Option<SocketAddr>,
     ws: WebSocket,
     client_connections: ClientConnections,
@@ -154,6 +169,8 @@ async fn user_connected(
     let connect = server::ConnectMessage {
         client: client.clone(),
         tail: String::from(tail.as_str()),
+        query,
+        headers: convert(&headers),
     };
 
     // This will call our function if the handshake succeeds.
@@ -230,4 +247,14 @@ async fn stop_server(
     }
 
     Ok(())
+}
+
+fn convert(headers: &HeaderMap) -> HashMap<String, Vec<String>> {
+    let mut header_hashmap = HashMap::new();
+    for (k, v) in headers {
+        let k = k.as_str().to_owned();
+        let v = String::from_utf8_lossy(v.as_bytes()).into_owned();
+        header_hashmap.entry(k).or_insert_with(Vec::new).push(v)
+    }
+    header_hashmap
 }

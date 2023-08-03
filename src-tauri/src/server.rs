@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use warp::ws::Message;
 
@@ -11,6 +12,8 @@ pub struct ServerStatus {
 pub struct ConnectMessage {
     pub client: Client,
     pub tail: String,
+    pub query: String,
+    pub headers: HashMap<String, Vec<String>>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DisconnectMessage {

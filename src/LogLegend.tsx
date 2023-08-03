@@ -1,6 +1,6 @@
 
 import type { FC } from 'react';
-import { ArrowDownOutlined, DisconnectOutlined, LinkOutlined, } from '@ant-design/icons';
+import { ArrowDownOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
 import { LogEvent } from './LoggingList';
 import { Tag, Typography } from 'antd';
 

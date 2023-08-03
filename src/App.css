@@ -7,3 +7,15 @@
 .wslogging {
   margin: 0.5rem;
 }
+
+.wsapptab {
+  height: 100%;
+}
+
+.wsapptab .ant-tabs-content {
+  height: 100%;
+}
+
+.wsapptab .ant-tabs-content > .ant-tabs-tabpane {
+  height: 100%;
+}
