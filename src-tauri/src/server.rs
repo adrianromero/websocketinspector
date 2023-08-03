@@ -5,14 +5,34 @@ use warp::ws::Message;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServerStatus {
-    pub key: String,
+    pub name: String,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ConnectMessage {
+    pub client: Client,
+    pub tail: String,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DisconnectMessage {
+    pub client: Client,
+    pub message: Option<CloseFrame>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ClientMessage {
+    pub client: Client,
+    pub message: MessageType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ClientConnection {
+pub struct Client {
     pub identifier: usize,
     pub address: Option<SocketAddr>,
-    pub tail: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CloseFrame {
+    pub code: u16,
+    pub reason: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -21,7 +41,6 @@ pub enum MessageType {
     BINARY { msg: Vec<u8> },
     PING { msg: Vec<u8> },
     PONG { msg: Vec<u8> },
-    CLOSE { code: u16, reason: String },
     FRAME { msg: Vec<u8> },
 }
 
@@ -47,21 +66,8 @@ impl From<Message> for MessageType {
                 msg: value.into_bytes(),
             };
         }
-        if value.is_close() {
-            let (code, reason) = value.close_frame().unwrap();
-            return MessageType::CLOSE {
-                code,
-                reason: String::from(reason),
-            };
-        }
         MessageType::FRAME {
             msg: value.into_bytes(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ClientMessage {
-    pub identifier: usize,
-    pub message: MessageType,
 }

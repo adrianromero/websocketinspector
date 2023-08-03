@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::net::{AddrParseError, SocketAddr};
@@ -15,7 +15,7 @@ use tokio::sync::oneshot::Sender;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use warp::path::Tail;
-use warp::ws::{Message, WebSocket, Ws};
+use warp::ws::{WebSocket, Ws};
 use warp::Filter;
 
 mod server;
@@ -28,7 +28,7 @@ struct ServerState {
 }
 
 type TauriState = RwLock<Option<ServerState>>;
-type ClientConnections = Arc<RwLock<HashMap<usize, server::ClientConnection>>>;
+type ClientConnections = Arc<RwLock<HashMap<usize, server::Client>>>;
 
 fn main() {
     tauri::Builder::default()
@@ -103,27 +103,20 @@ async fn start_server(
                 },
             );
 
-        let index = warp::get()
-            .and(warp::path::end())
-            .map(|| warp::reply::html(INDEX_HTML));
-
         let (tx, rx) = oneshot::channel::<()>();
         let app_handle2 = app_handle.clone();
-        let result = warp::serve(index.or(chat)).try_bind_with_graceful_shutdown(
-            socketaddress,
-            async move {
-                app_handle2
-                    .emit_all(
-                        "server_status",
-                        server::ServerStatus {
-                            key: String::from("started"),
-                        },
-                    )
-                    .unwrap();
-                drop(app_handle2);
-                rx.await.unwrap();
-            },
-        );
+        let result = warp::serve(chat).try_bind_with_graceful_shutdown(socketaddress, async move {
+            app_handle2
+                .emit_all(
+                    "server_status",
+                    server::ServerStatus {
+                        name: String::from("started"),
+                    },
+                )
+                .unwrap();
+            drop(app_handle2);
+            rx.await.unwrap();
+        });
 
         match result {
             Ok((_, server)) => {
@@ -151,22 +144,25 @@ async fn user_connected(
     ws: WebSocket,
     client_connections: ClientConnections,
 ) {
-    let (mut user_ws_tx, mut user_ws_rx) = ws.split();
+    let (_, mut user_ws_rx) = ws.split();
 
     let identifier = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
-    let connection = server::ClientConnection {
+    let client = server::Client {
         identifier,
         address,
+    };
+    let connect = server::ConnectMessage {
+        client: client.clone(),
         tail: String::from(tail.as_str()),
     };
 
     // This will call our function if the handshake succeeds.
-    app_handle.emit_all("client_connect", &connection).unwrap();
+    app_handle.emit_all("client_connect", &connect).unwrap();
 
     client_connections
         .write()
         .await
-        .insert(identifier, connection.clone());
+        .insert(identifier, client.clone());
 
     while let Some(result) = user_ws_rx.next().await {
         let msg = match result {
@@ -176,27 +172,36 @@ async fn user_connected(
                 break;
             }
         };
-        println!("received {:?}", msg);
-        let message = server::ClientMessage {
-            identifier,
-            message: server::MessageType::from(msg),
-        };
-        app_handle.emit_all("client_message", &message).unwrap();
+        println!("received {:?}", msg); // Close(None)
+        if msg.is_close() {
+            let disconnect = server::DisconnectMessage {
+                client: client.clone(),
+                message: msg.close_frame().map(|(code, reason)| server::CloseFrame {
+                    code,
+                    reason: String::from(reason),
+                }),
+            };
+            app_handle
+                .emit_all("client_disconnect", &disconnect)
+                .unwrap();
+        } else {
+            let message = server::ClientMessage {
+                client: client.clone(),
+                message: server::MessageType::from(msg),
+            };
+            app_handle.emit_all("client_message", &message).unwrap();
+        }
 
-        let chuqui = client_connections.read().await;
-        user_ws_tx
-            .send(Message::text(&chuqui.get(&identifier).unwrap().tail))
-            .await
-            .unwrap_or_else(|e| {
-                eprintln!("websocket send error: {}", e);
-            });
+        // let chuqui = client_connections.read().await;
+        // user_ws_tx
+        //     .send(Message::text(&chuqui.get(&identifier).unwrap().tail))
+        //     .await
+        //     .unwrap_or_else(|e| {
+        //         eprintln!("websocket send error: {}", e);
+        //     });
     }
 
     client_connections.write().await.remove(&identifier);
-
-    app_handle
-        .emit_all("client_disconnect", &connection)
-        .unwrap();
 }
 
 #[tauri::command]
@@ -216,7 +221,7 @@ async fn stop_server(
             .emit_all(
                 "server_status",
                 server::ServerStatus {
-                    key: String::from("stopped"),
+                    name: String::from("stopped"),
                 },
             )
             .unwrap();
@@ -226,15 +231,3 @@ async fn stop_server(
 
     Ok(())
 }
-
-static INDEX_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>Warp Sample Pagle</title>
-    </head>
-    <body>
-        <h1>Warp sample page</h1>
-        <p>This is a sample page</p>
-    </body>
-</html>
-"#;

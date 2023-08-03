@@ -1,0 +1,13 @@
+.serverform-status {
+  text-align: right;
+}
+
+.serverform-label {
+  text-align: end;
+}
+
+.serverform-label > label {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+}
