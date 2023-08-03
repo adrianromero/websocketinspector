@@ -91,6 +91,12 @@ export const websocketSlice = createSlice({
         toggleClientLogActive: (state, action: PayloadAction<void>) => {
             state.clientlogactive = !state.clientlogactive;
         },
+        stopClientStatus: (state, action: PayloadAction<void>) => {
+            state.clientstatus = { name: "stopped" };
+            state.connections = new Map<number, Connection>();
+            state.clientlog = [];
+            state.clientlogactive = true;
+        },
         setClientStatus: (state, action: PayloadAction<ClientStatus>) => {
             state.clientstatus = { ...state.clientstatus, ...action.payload };
         },
@@ -127,17 +133,17 @@ export const websocketSlice = createSlice({
                     time: now,
                     payload: action.payload,
                 };
-                // Logging
-                if (state.clientlogactive) {
-                    state.clientlog = [
-                        ...state.clientlog,
-                        {
-                            kind: "disconnect",
-                            time: now,
-                            payload: action.payload,
-                        },
-                    ];
-                }
+            }
+            // Logging
+            if (state.clientlogactive) {
+                state.clientlog = [
+                    ...state.clientlog,
+                    {
+                        kind: "disconnect",
+                        time: now,
+                        payload: action.payload,
+                    },
+                ];
             }
         },
         receiveMessage: (state, action: PayloadAction<Message>) => {
@@ -169,6 +175,7 @@ export const websocketSlice = createSlice({
 
 export const {
     setClientStatus,
+    stopClientStatus,
     openConnection,
     closeConnection,
     receiveMessage,

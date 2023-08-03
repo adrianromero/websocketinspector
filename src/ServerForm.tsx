@@ -11,7 +11,7 @@ import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
 import WarningIcon from "@mui/icons-material/Warning";
 
 import {
-    setClientStatus
+    setClientStatus, stopClientStatus
 } from "./features/websocketSlice";
 import AlertDialog, { useAlertDialog } from "./AlertDialog";
 import { useAppDispatch } from "./app/hooks";
@@ -75,7 +75,7 @@ const ServerForm: FC = () => {
                                     dispatch(setClientStatus({ name: "started", address: address as string }));
                                 })
                                 .catch(e => {
-                                    dispatch(setClientStatus({ name: "stopped", address: undefined }));
+                                    dispatch(stopClientStatus());
                                     openAlertDialog({
                                         title: "Start service",
                                         icon: (

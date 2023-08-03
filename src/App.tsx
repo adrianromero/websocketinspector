@@ -6,7 +6,7 @@ import ServerForm from "./ServerForm";
 
 import WebsocketListener from "./features/WebsocketListener";
 import {
-    setClientStatus, selectClientStatus
+    setClientStatus, stopClientStatus, selectClientStatus
 } from "./features/websocketSlice";
 import { View, getRoute, selectTitle } from "./features/uiSlice";
 import { selectAddress, navigate } from "./features/uiSlice";
@@ -52,7 +52,7 @@ const App: FC = () => {
         dispatch(setClientStatus({ name: "stopping" }));
 
         invoke("stop_server").then(() => {
-            dispatch(setClientStatus({ name: "stopped", address: undefined }));
+            dispatch(stopClientStatus());
         }).catch(e => {
             dispatch(setClientStatus({ name: "started" }));
         });
