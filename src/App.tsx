@@ -1,3 +1,4 @@
+import React from 'react';
 import { invoke } from "@tauri-apps/api/tauri";
 import logo from "./logo.svg";
 import "./App.css";
