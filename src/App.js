@@ -1,7 +1,12 @@
-import logo from './logo.svg';
-import './App.css';
+import { invoke } from "@tauri-apps/api/tauri";
+import logo from "./logo.svg";
+import "./App.css";
 
 function App() {
+  const doClick = () => {
+    invoke("my_function");
+    invoke("my_other_function").then(() => invoke("my_function"));
+  };
   return (
     <div className="App">
       <header className="App-header">
@@ -17,6 +22,7 @@ function App() {
         >
           Learn React
         </a>
+        <button onClick={doClick}>Press me now</button>
       </header>
     </div>
   );
