@@ -129,14 +129,19 @@ async fn start_server(
         let (stop_tx, stop_rx) = oneshot::channel::<()>();
         let (start_tx, start_rx) = oneshot::channel::<()>();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
+        // tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
 
+        let client_connections_close = client_connections.clone();
         let result = warp::serve(chat).try_bind_with_graceful_shutdown(socketaddress, async move {
             start_tx.send(()).unwrap();
             stop_rx.await.unwrap();
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
+            // tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
             // Close pending clients gratefully
+            for client_connection in client_connections_close.read().await.values() {
+                client_connection.tx.send(Message::close()).unwrap();
+            }
+
             println!("Bind signal finished.");
         });
 
@@ -256,6 +261,7 @@ async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerEr
     {
         stop_tx.send(()).unwrap();
         handle.await.unwrap();
+        println!("Server stopped");
         return Ok(());
     }
 
