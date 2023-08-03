@@ -1,32 +1,51 @@
-import type { FC } from "react";
+import { FC, useEffect } from "react";
 import Typography from '@mui/material/Typography';
-import type { Connection } from "./features/websocketSlice";
-
+import { Connection, selectWebsocketConnection } from "./features/websocketSlice";
+import { useAppDispatch, useAppSelector } from "./app/hooks";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import styles from "./ClientInfo.module.css";
+import scroll from "./Scroll.module.css";
+import { Fab } from "@mui/material";
+import { navigate, setTitle } from "./features/uiSlice";
 
 export type ServerStatusProps = {
     name: string;
 };
 
-const ClientInfo: FC<Connection> = connection => {
+const ClientInfo: FC<{ path?: string }> = ({ path }) => {
+    const dispatch = useAppDispatch();
+    const identifier = Number(path);
+    const connection: Connection | undefined = useAppSelector(selectWebsocketConnection(identifier));
+
+    useEffect(() => {
+        if (connection) {
+            dispatch(setTitle(String(connection.request.client.address)));
+        }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    if (!connection) {
+        throw new Error();
+    }
+
     return (
-        <div className={styles.scrollcontainer}>
-            <div className={styles.scrolllist + " " + styles.infocontent}>
+        <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
+            <div className={scroll.scrolllist + " " + styles.infocontent}>
                 <Typography>Client information</Typography>
                 <div>
                     <span className={styles.infolabel}>Address: </span>
-                    <span>{connection.connection.client.address}</span>
+                    <span>{connection.request.client.address}</span>
                 </div>
                 <div>
                     <span className={styles.infolabel}>Path: </span>
-                    <span>/{connection.connection.tail}</span>
+                    <span>/{connection.request.tail}</span>
                 </div>
                 <div>
                     <span className={styles.infolabel}>Query: </span>
-                    <span>{JSON.stringify(connection.connection.query)}</span>
+                    <span>{JSON.stringify(connection.request.query)}</span>
                 </div>
                 <Typography>Headers</Typography>
-                {Array.from(Object.entries(connection.connection.headers)).map(
+                {Array.from(Object.entries(connection.request.headers)).map(
                     ([key, value]) => {
                         return (
                             <div>
@@ -37,49 +56,16 @@ const ClientInfo: FC<Connection> = connection => {
                     }
                 )}
             </div>
-        </div>
+            <div className={scroll.toolbar}>
+                <Fab
+                    size="medium"
+                    aria-label={"back"}
+                    onClick={() => dispatch(navigate({ view: "client", path }))}>
+                    {<ArrowBackIcon />}
+                </Fab>
+            </div>
+        </div >
     );
-
-    // <Collapse
-    //     bordered={false}
-    //     size="small"
-    //     defaultActiveKey={["1", "2"]}
-    //     className="wsinfocollapse"
-    //     style={{
-    //         overflow: "auto",
-    //         width: "100%",
-    //         border: "1px solid rgba(5,5,5,0.1)",
-    //         borderRadius: "8px",
-    //     }}
-    // >
-    //     <Collapse.Panel header="Client information" key="1">
-    //         <div>
-    //             <span className={styles.infolabel}>Address: </span>
-    //             <span>{connection.connection.client.address}</span>
-    //         </div>
-    //         <div>
-    //             <span className={styles.infolabel}>Path: </span>
-    //             <span>/{connection.connection.tail}</span>
-    //         </div>
-    //         <div>
-    //             <span className={styles.infolabel}>Query: </span>
-    //             <span>{JSON.stringify(connection.connection.query)}</span>
-    //         </div>
-    //     </Collapse.Panel>
-    //     <Collapse.Panel header="Headers" key="2">
-    //         {Array.from(Object.entries(connection.connection.headers)).map(
-    //             ([key, value]) => {
-    //                 return (
-    //                     <div>
-    //                         <span className={styles.infolabel}>{key}: </span>
-    //                         <span>{value}</span>
-    //                     </div>
-    //                 );
-    //             }
-    //         )}
-    //     </Collapse.Panel>
-    // </Collapse>
-
 };
 
 export default ClientInfo;

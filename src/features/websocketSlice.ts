@@ -13,12 +13,12 @@ export type Client = {
     address: string;
 };
 
-export type ClientDisconnection = {
+export type Disconnection = {
     client: Client;
     message: { code: number; reason: string } | null;
 };
 
-export type ClientConnection = {
+export type Request = {
     client: Client;
     tail: string;
     query: Map<string, string>;
@@ -33,47 +33,44 @@ export type BinaryMessage = {
     BINARY: { msg: number[] };
 };
 
-export type ClientMessage = {
+export type Message = {
     client: Client;
+    direction: "SERVER" | "CLIENT";
     message: TextMessage | BinaryMessage;
-};
-
-export interface MessageInfo {
-    time: Date;
-    message: TextMessage | BinaryMessage;
-}
-export type Connection = {
-    connection: ClientConnection;
-    time: Date;
-    messages: MessageInfo[];
-    disconnection: {
-        time: Date;
-        message: { code: number; reason: string } | null;
-    } | null;
 };
 
 export type LogEventMessage = {
     kind: "message";
     time: Date;
-    payload: ClientMessage;
+    payload: Message;
 };
 
-export type LogEventConnection = {
+export type LogEventRequest = {
     kind: "connect";
     time: Date;
-    payload: ClientConnection;
+    payload: Request;
 };
 
 export type LogEventDisconnection = {
     kind: "disconnect";
     time: Date;
-    payload: ClientDisconnection;
+    payload: Disconnection;
 };
 
 export type LogEvent =
-    | LogEventConnection
+    | LogEventRequest
     | LogEventDisconnection
     | LogEventMessage;
+
+export type Connection = {
+    request: Request;
+    time: Date;
+    messages: LogEventMessage[];
+    disconnection: {
+        time: Date;
+        message: { code: number; reason: string } | null;
+    } | null;
+};
 
 export interface WebsocketState {
     clientstatus: ClientStatus;
@@ -112,10 +109,10 @@ export const websocketSlice = createSlice({
             state.clientlog = [];
             state.clientlogactive = true;
         },
-        openConnection: (state, action: PayloadAction<ClientConnection>) => {
+        openConnection: (state, action: PayloadAction<Request>) => {
             const now = new Date();
             state.connections.set(action.payload.client.identifier, {
-                connection: action.payload,
+                request: action.payload,
                 time: now,
                 messages: [],
                 disconnection: null,
@@ -132,10 +129,7 @@ export const websocketSlice = createSlice({
                 ];
             }
         },
-        closeConnection: (
-            state,
-            action: PayloadAction<ClientDisconnection>
-        ) => {
+        closeConnection: (state, action: PayloadAction<Disconnection>) => {
             const now = new Date();
             const current = state.connections.get(
                 action.payload.client.identifier
@@ -158,16 +152,16 @@ export const websocketSlice = createSlice({
                 }
             }
         },
-        receiveMessage: (state, action: PayloadAction<ClientMessage>) => {
+        receiveMessage: (state, action: PayloadAction<Message>) => {
             const now = new Date();
-            const message = action.payload;
             const current = state.connections.get(
                 action.payload.client.identifier
             );
             if (current) {
                 current.messages.push({
+                    kind: "message",
                     time: now,
-                    message: message.message,
+                    payload: action.payload,
                 });
             }
             // Logging

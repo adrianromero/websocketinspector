@@ -8,9 +8,9 @@ import {
 } from "./websocketSlice";
 import type {
     ServerStatus,
-    ClientConnection,
-    ClientDisconnection,
-    ClientMessage,
+    Request,
+    Disconnection,
+    Message,
 } from "./websocketSlice";
 import { listen } from "@tauri-apps/api/event";
 
@@ -20,20 +20,20 @@ const WebsocketListener: FC = () => {
         const server_status = listen("server_status", event => {
             dispatch(setServerStatus(event.payload as ServerStatus));
         });
-        const clientconnect = listen("client_connect", event => {
-            dispatch(openConnection(event.payload as ClientConnection));
+        const request = listen("client_connect", event => {
+            dispatch(openConnection(event.payload as Request));
         });
-        const clientdisconnect = listen("client_disconnect", event => {
-            dispatch(closeConnection(event.payload as ClientDisconnection));
+        const disconnect = listen("client_disconnect", event => {
+            dispatch(closeConnection(event.payload as Disconnection));
         });
-        const clientmessage = listen("client_message", event => {
-            dispatch(receiveMessage(event.payload as ClientMessage));
+        const message = listen("client_message", event => {
+            dispatch(receiveMessage(event.payload as Message));
         });
         return () => {
             server_status.then(f => f());
-            clientconnect.then(f => f());
-            clientdisconnect.then(f => f());
-            clientmessage.then(f => f());
+            request.then(f => f());
+            disconnect.then(f => f());
+            message.then(f => f());
         };
     }, [dispatch]);
 

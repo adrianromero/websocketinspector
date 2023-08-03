@@ -13,3 +13,11 @@
     bottom: 0rem;
     right: 0rem;
 }
+
+.toolbar {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 1rem;
+}

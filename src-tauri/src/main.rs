@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::net::{AddrParseError, SocketAddr};
@@ -11,12 +11,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::oneshot::Sender;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::{mpsc, oneshot, RwLock};
 use tokio::task::JoinHandle;
 use warp::http::HeaderMap;
 use warp::path::Tail;
-use warp::ws::{WebSocket, Ws};
+use warp::ws::{Message, WebSocket, Ws};
 use warp::Filter;
 
 mod server;
@@ -26,10 +27,16 @@ static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
 struct ServerState {
     handle: JoinHandle<()>,
     tx: Sender<()>,
+    client_connections: ClientConnections,
 }
 
 type TauriState = RwLock<Option<ServerState>>;
-type ClientConnections = Arc<RwLock<HashMap<usize, server::Client>>>;
+pub struct ClientConnection {
+    pub identifier: usize,
+    pub address: Option<SocketAddr>,
+    pub tx: UnboundedSender<Message>,
+}
+type ClientConnections = Arc<RwLock<HashMap<usize, ClientConnection>>>;
 
 fn main() {
     tauri::Builder::default()
@@ -37,7 +44,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             check_server,
             start_server,
-            stop_server
+            stop_server,
+            send_text,
+            close_client,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running WebSocket inspector");
@@ -82,9 +91,10 @@ async fn start_server(
 
     if let None = mystate {
         let client_connections = Arc::new(RwLock::new(HashMap::new()));
-        let client_connections_state = warp::any().map(move || client_connections.clone());
 
         let app_handle2 = app_handle.clone();
+        let client_connections_forstate = client_connections.clone();
+        let client_connections_state = warp::any().map(move || client_connections_forstate.clone());
         let chat = warp::get()
             .and(warp::path::tail())
             .and(warp::addr::remote())
@@ -135,7 +145,11 @@ async fn start_server(
         match result {
             Ok((_, server)) => {
                 let handle = tokio::task::spawn(server);
-                *srv = Some(ServerState { handle, tx });
+                *srv = Some(ServerState {
+                    handle,
+                    tx,
+                    client_connections,
+                });
             }
             Err(e) => {
                 *srv = mystate;
@@ -160,9 +174,23 @@ async fn user_connected(
     ws: WebSocket,
     client_connections: ClientConnections,
 ) {
-    let (_, mut user_ws_rx) = ws.split();
+    let (mut user_ws_tx, mut user_ws_rx) = ws.split();
+    let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
+    tokio::task::spawn(async move {
+        while let Some(message) = rx.recv().await {
+            user_ws_tx.send(message).await.unwrap_or_else(|e| {
+                eprintln!("websocket send error: {}", e);
+            });
+        }
+    });
+    //tx.send(Message::text(String::from("sdafasf"))).unwrap();
     let identifier = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
+    let client_connection = ClientConnection {
+        identifier,
+        address,
+        tx,
+    };
     let client = server::Client {
         identifier,
         address,
@@ -180,7 +208,7 @@ async fn user_connected(
     client_connections
         .write()
         .await
-        .insert(identifier, client.clone());
+        .insert(identifier, client_connection);
 
     while let Some(result) = user_ws_rx.next().await {
         let msg = match result {
@@ -205,18 +233,11 @@ async fn user_connected(
         } else {
             let message = server::ClientMessage {
                 client: client.clone(),
+                direction: server::Direction::CLIENT,
                 message: server::MessageType::from(msg),
             };
             app_handle.emit_all("client_message", &message).unwrap();
         }
-
-        // let chuqui = client_connections.read().await;
-        // user_ws_tx
-        //     .send(Message::text(&chuqui.get(&identifier).unwrap().tail))
-        //     .await
-        //     .unwrap_or_else(|e| {
-        //         eprintln!("websocket send error: {}", e);
-        //     });
     }
 
     client_connections.write().await.remove(&identifier);
@@ -232,7 +253,14 @@ async fn stop_server(
     let mut srv = state.write().await;
 
     let mystate = std::mem::replace(&mut *srv, None);
-    if let Some(ServerState { handle, tx }) = mystate {
+    if let Some(ServerState {
+        handle,
+        tx,
+        client_connections: _,
+    }) = mystate
+    {
+        // TODO: Close all client connections first...
+
         tx.send(()).unwrap();
         handle.await.unwrap();
         app_handle
@@ -244,6 +272,76 @@ async fn stop_server(
                 },
             )
             .unwrap();
+    } else {
+        println!("Server: No Server to stop");
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_client(state: tauri::State<'_, TauriState>, identifier: usize) -> Result<(), ()> {
+    let mut srv = state.write().await;
+    if let Some(ServerState {
+        handle: _,
+        tx: _,
+        client_connections,
+    }) = &mut *srv
+    {
+        if let Some(ClientConnection {
+            identifier: _,
+            address: _,
+            tx,
+        }) = client_connections.read().await.get(&identifier)
+        {
+            tx.send(Message::close_with(1009u16, "peeeepe hi fallau"))
+                .unwrap();
+        } else {
+            println!("Client not found");
+        }
+    } else {
+        println!("Server: No Server to stop");
+    }
+
+    Ok(())
+}
+#[tauri::command]
+async fn send_text(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    text: String,
+) -> Result<(), ()> {
+    let mut srv = state.write().await;
+    if let Some(ServerState {
+        handle: _,
+        tx: _,
+        client_connections,
+    }) = &mut *srv
+    {
+        if let Some(ClientConnection {
+            identifier: _,
+            address,
+            tx,
+        }) = client_connections.read().await.get(&identifier)
+        {
+            println!("Sending {}", &text);
+            let msg = Message::text(text);
+            tx.send(msg.clone()).unwrap();
+
+            let message = server::ClientMessage {
+                client: server::Client {
+                    identifier,
+
+                    address: address.clone(),
+                },
+                direction: server::Direction::SERVER,
+                message: server::MessageType::from(msg),
+            };
+            app_handle.emit_all("client_message", &message).unwrap();
+        } else {
+            println!("Client not found");
+        }
     } else {
         println!("Server: No Server to stop");
     }

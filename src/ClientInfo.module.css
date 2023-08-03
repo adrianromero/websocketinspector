@@ -3,23 +3,6 @@
     color: rgb(128, 128, 128);
 }
 
-.scrollcontainer {
-    border: 1px solid rgba(5, 5, 5, 0.1);
-    border-radius: 0.5rem;
-    display: flex;
-    justify-items: stretch;
-    position: relative;
-}
-
-.scrolllist {
-    position: absolute;
-    overflow: auto;
-    top: 0rem;
-    left: 0rem;
-    bottom: 0rem;
-    right: 0rem;
-}
-
 .infocontent {
     padding: 0.5rem;
 }

@@ -21,9 +21,17 @@ pub struct DisconnectMessage {
     pub client: Client,
     pub message: Option<CloseFrame>,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum Direction {
+    SERVER,
+    CLIENT,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ClientMessage {
     pub client: Client,
+    pub direction: Direction,
     pub message: MessageType,
 }
 

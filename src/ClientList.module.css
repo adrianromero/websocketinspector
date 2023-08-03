@@ -11,20 +11,3 @@
     display: flex;
     gap: 0.5rem;
 }
-
-.scrollcontainer {
-    border: 1px solid rgba(5, 5, 5, 0.1);
-    border-radius: 0.5rem;
-    display: flex;
-    justify-items: stretch;
-    position: relative;
-}
-
-nav.scrolllist {
-    position: absolute;
-    overflow: auto;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-}

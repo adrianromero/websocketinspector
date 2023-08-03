@@ -11,7 +11,6 @@ import {
     DialogTitle,
 } from "@mui/material";
 import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
-import StopCircleIcon from "@mui/icons-material/StopCircle";
 import WarningIcon from "@mui/icons-material/Warning";
 import SyncIcon from "@mui/icons-material/Sync";
 
@@ -93,13 +92,13 @@ const ServerForm: FC = () => {
                     });
                 }}
             >
-                Start server
+                Start listening
             </Button>
         );
     } else {
         button = (
             <Button variant="contained" startIcon={<SyncIcon />} disabled>
-                Start server
+                Start listening
             </Button>
         );
     }
@@ -108,7 +107,6 @@ const ServerForm: FC = () => {
         <>
             <div
                 className={styles.serverformcontainer}
-
             >
                 <TextField
                     required

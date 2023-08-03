@@ -3,8 +3,9 @@ import { FC, ReactNode, useEffect, useRef } from "react";
 import { Avatar, Divider, List, ListItem, ListItemAvatar, ListItemText, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
-import DownloadIcon from '@mui/icons-material/Download';
-import { green, red, cyan } from '@mui/material/colors';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
+import CallMadeIcon from '@mui/icons-material/CallMade';
+import { green, red, blue } from '@mui/material/colors';
 import {
     selectClientLog,
 } from "./features/websocketSlice";
@@ -29,7 +30,7 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
     }, [clientlog.length]);
     return (
         <div ref={listRef} className={className}>
-            <List sx={{ bgcolor: 'background.paper' }}>
+            <List sx={{ bgcolor: 'background.paper' }} dense disablePadding>
                 {clientlog.map(item => {
                     const { kind, time, payload } = item;
                     let label: string;
@@ -38,18 +39,20 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
                     let paragraph;
                     if (kind === "connect") {
                         label = "CONNECT " + payload.client.address;
-                        icon = <Avatar sx={{ bgcolor: green[500], height: 32, width: 32 }} ><LinkIcon fontSize="small" /></Avatar>;
+                        icon = <Avatar sx={{ bgcolor: green[500], height: 24, width: 24 }} ><LinkIcon sx={{ fontSize: 16 }} /></Avatar>;
                         paragraph = "/" + payload.tail;
                     } else if (kind === "disconnect") {
                         label = "DISCONNECT " + payload.client.address;
-                        icon = <Avatar sx={{ bgcolor: red[500], height: 32, width: 32 }} ><LinkOffIcon fontSize="small" /></Avatar>;
+                        icon = <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>;
                         let text: string = payload.message
                             ? `${payload.message.code}: ${payload.message.reason}`
                             : "unknown:";
                         paragraph = text;
                     } else if (kind === "message") {
                         let text: string;
-                        icon = <Avatar sx={{ bgcolor: cyan[500], height: 32, width: 32 }} ><DownloadIcon fontSize="small" /></Avatar>;;
+                        icon = payload.direction === "CLIENT"
+                            ? <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallReceivedIcon sx={{ fontSize: 16 }} /></Avatar>
+                            : <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallMadeIcon sx={{ fontSize: 16 }} /></Avatar>;
                         if ("TEXT" in payload.message) {
                             label = "TEXT " + payload.client.address;
                             text = payload.message.TEXT.msg;
@@ -73,9 +76,18 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
                             </ListItemAvatar>
                             <ListItemText
                                 primary={label}
-                                secondary={paragraph}
+                                secondary={
+                                    <Typography
+                                        sx={{
+                                            whiteSpace: "nowrap",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis"
+                                        }}
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >{paragraph}</Typography>}
                             />
-                            <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200 }}>
+                            <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
                                 {time.toLocaleString()}
                             </Typography>
                         </ListItem >

@@ -1,123 +1,72 @@
-import { FC, useState, useEffect } from "react";
-import { IconButton } from "@mui/material";
-import List from '@mui/material/List';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import DeleteIcon from "@mui/icons-material/Delete";
+import { FC } from "react";
+import { List, ListItemAvatar, Avatar, ListItem, ListItemText, Divider, IconButton, Typography } from '@mui/material';
+
+import { green, red } from '@mui/material/colors';
+
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
-import ClientInfo from "./ClientInfo";
-import {
-    selectWebsocketConnection,
-    selectWebsocketConnections,
-} from "./features/websocketSlice";
-import { useAppSelector } from "./app/hooks";
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { selectWebsocketConnections } from "./features/websocketSlice";
+import { useAppDispatch, useAppSelector } from "./app/hooks";
 
 import styles from "./ClientList.module.css";
-import ClientMessages from "./ClientMessages";
+import scroll from "./Scroll.module.css";
+import { navigate } from "./features/uiSlice";
 
 const ClientList: FC = () => {
-    const [current, setCurrent] = useState<number | undefined>(undefined);
-    const [view, setView] = useState<string>("header");
-    const currentConnection = useAppSelector(
-        selectWebsocketConnection(current)
-    );
+    const dispatch = useAppDispatch();
     const connections = useAppSelector(selectWebsocketConnections);
     const items = Array.from(connections.entries()).map(
         ([identifier, connection]) => ({ identifier, connection }));
-    const itemsLength = items.length;
-
-    useEffect(() => {
-        if (itemsLength && typeof current !== "number") {
-            setView("header")
-            setCurrent(items[0].identifier);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [current, itemsLength]);
-
-    let tab = null;
-    if (currentConnection) {
-        if (view === "header") {
-            tab = <ClientInfo {...currentConnection} />;
-        } else if (view === "messages") {
-            tab = <ClientMessages {...currentConnection} />;
-        } else {
-            tab = <div style={{ backgroundColor: "white" }} />;
-        }
-    } else {
-        tab = <div style={{ backgroundColor: "white" }} />;
-    }
 
     return (
-        <div className={styles.container}>
-            <div className={styles.toolbar}>
-                <IconButton
-                    aria-label="clear"
-                    color="default"
-                    onClick={() => { }}
-                >
-                    <DeleteIcon />
-                </IconButton>
-            </div>
-            <div className={styles.toolbar}>
-                <ToggleButtonGroup
-                    color="standard"
-                    size="small"
-                    value={view}
-                    exclusive
-                    onChange={(
-                        event: React.MouseEvent<HTMLElement>,
-                        value: string,
-                    ) => {
-                        setView(value);
-                    }}
-                    aria-label="Platform"
-                >
-                    <ToggleButton value="header">Header</ToggleButton>
-                    <ToggleButton value="messages">Messages</ToggleButton>
-                </ToggleButtonGroup>
-                <IconButton
-                    aria-label="clear"
-                    color="default"
-                    onClick={() => { }}
-                >
-                    <DeleteIcon />
-                </IconButton>
-            </div>
-            <div className={styles.scrollcontainer}>
-                <List component="nav" aria-label="main mailbox folders" className={styles.scrolllist}>
-                    {items.map((item) =>
-                        <ListItemButton
-                            selected={item.identifier === current}
-                            onClick={(event) => {
-                                setView("header");
-                                setCurrent(item.identifier);
-                            }}
-                        >
-                            <ListItemIcon>
-                                {item.connection.disconnection ? (
-                                    <LinkIcon
-                                        sx={{ color: "red", fontSize: "120%" }}
-                                    />
-                                ) : (
-                                    <LinkOffIcon
-                                        sx={{ color: "#87d068", fontSize: "120%" }}
-                                    />
-                                )}
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={item.connection.connection.client.address}
-                                secondary={item.connection.connection.tail}
-                            />
-                        </ListItemButton>
-                    )
+        <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
+            <div className={scroll.scrolllist} >
+                <List sx={{ bgcolor: 'background.paper' }} dense disablePadding>
+                    {items.map((item) => {
+                        const { connection } = item;
+                        const connectionTime = connection.time;
+                        return <>
+                            <ListItem alignItems="flex-start"
+                                secondaryAction={
+                                    <IconButton onClick={() => {
+                                        dispatch(navigate({
+                                            view: "client",
+                                            path: String(item.identifier)
+                                        }))
+                                    }} edge="end" aria-label="delete">
+                                        <ChevronRightIcon />
+                                    </IconButton>
+                                }>
+                                <ListItemAvatar>
+                                    {connection.disconnection ? (
+                                        <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>
+                                    ) : (
+                                        <Avatar sx={{ bgcolor: green[500], height: 24, width: 24 }} ><LinkIcon sx={{ fontSize: 16 }} /></Avatar>
+                                    )}
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={connection.request.client.address}
+                                    secondary={connection.request.tail}
+                                />
+                                <div style={{ "marginRight": "1rem" }}>
+                                    <Typography variant="body2" noWrap align="right" sx={{ width: 350, color: 'text.secondary' }}>
+                                        {connectionTime.toLocaleString()} - {connection.disconnection ? connection.disconnection.time.toLocaleString() : "..."}
+                                    </Typography>
+                                    <Typography variant="body2" noWrap sx={{ width: 150, color: 'text.secondary' }}>
+                                        Received messages: {connection.messages.filter(m => m.payload.direction === "CLIENT").length}
+                                    </Typography>
+                                    <Typography variant="body2" noWrap sx={{ width: 150, color: 'text.secondary' }}>
+                                        Sent messages: {connection.messages.filter(m => m.payload.direction === "SERVER").length}
+                                    </Typography>
+                                </div>
+                            </ListItem>
+                            <Divider component="li" />
+                        </>
                     }
+                    )}
                 </List>
             </div>
-            {tab}
         </div>
     );
 };

@@ -2,28 +2,31 @@ import React from "react";
 import type { FC } from "react";
 
 import { invoke } from "@tauri-apps/api";
-import LoggingList from "./LoggingList";
 import ServerForm from "./ServerForm";
 
 import WebsocketListener from "./features/WebsocketListener";
 import {
     setClientStatus, selectServerStatus, selectClientStatus
 } from "./features/websocketSlice";
+import { View, getRoute, selectTitle } from "./features/uiSlice";
+import { selectAddress, navigate } from "./features/uiSlice";
 
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import ListItemIcon from '@mui/material/ListItemIcon';
+import MessageIcon from '@mui/icons-material/Message';
+import BoltIcon from '@mui/icons-material/Bolt';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import Menu from "@mui/material/Menu";
 import { useAppSelector, useAppDispatch } from "./app/hooks";
 
 import { Divider, ListItemText, MenuItem } from "@mui/material";
-import { Settings, Logout } from "@mui/icons-material";
+import { Logout } from "@mui/icons-material";
 import "./App.css";
-import ClientList from "./ClientList";
+
 
 const App: FC = () => {
 
@@ -31,8 +34,9 @@ const App: FC = () => {
     const serverstatus = useAppSelector(selectServerStatus);
     const clientstatus = useAppSelector(selectClientStatus);
     const listening = Boolean(serverstatus.address) && clientstatus === "started";
-
-    const [view, setView] = React.useState<string>("logging");
+    const title = useAppSelector(selectTitle);
+    const { view, path } = useAppSelector(selectAddress);
+    const route = getRoute(view);
 
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
@@ -44,7 +48,7 @@ const App: FC = () => {
     };
     const handleDisconnect = () => {
         setAnchorEl(null);
-        setView("logging");
+        dispatch(navigate({ view: "clients" }));
         dispatch(setClientStatus("stopped"));
 
         invoke("stop_server").catch(e => {
@@ -52,18 +56,9 @@ const App: FC = () => {
         });
 
     };
-    const handleView = (v: string) => () => {
-        setView(v);
+    const handleView = (view: View) => () => {
+        dispatch(navigate({ view }));
         setAnchorEl(null);
-    };
-    const viewTitle = () => {
-        if (view === "logging") {
-            return "Events log";
-        }
-        if (view === "clients") {
-            return "Clients";
-        }
-        return "Unknown view";
     };
 
     return (
@@ -97,15 +92,13 @@ const App: FC = () => {
                             <MenuIcon />
                         </IconButton>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            {serverstatus.name === "started" ? viewTitle() : "Server configuration"}
+                            {serverstatus.name === "started" ? (route.label + (title ? ` - ${title}` : "")) : "Listener configuration"}
                         </Typography>
                         {listening &&
                             <Typography variant="body2">
                                 {`Listening on ${serverstatus.address}`}
                             </Typography>
                         }
-
-
                     </Toolbar>
                 </AppBar>
                 <Menu
@@ -143,17 +136,17 @@ const App: FC = () => {
                     transformOrigin={{ horizontal: 'left', vertical: 'top' }}
                     anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
                 >
-                    <MenuItem onClick={handleView("logging")}>
-                        <ListItemIcon>
-                            <Settings fontSize="small" />
-                        </ListItemIcon>
-                        Events log
-                    </MenuItem>
                     <MenuItem onClick={handleView("clients")}>
                         <ListItemIcon>
-                            <Logout fontSize="small" />
+                            <BoltIcon fontSize="small" />
                         </ListItemIcon>
                         Clients
+                    </MenuItem>
+                    <MenuItem onClick={handleView("logging")}>
+                        <ListItemIcon>
+                            <MessageIcon fontSize="small" />
+                        </ListItemIcon>
+                        Events log
                     </MenuItem>
                     <Divider />
                     <MenuItem onClick={handleDisconnect}>
@@ -179,8 +172,7 @@ const App: FC = () => {
                             flexGrow: 1,
                         }}
                     >
-                        {view === "logging" && <LoggingList />}
-                        {view === "clients" && <ClientList />}
+                        <route.Component path={path} />
                     </div>
                 }
             </div>
