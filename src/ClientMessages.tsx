@@ -3,12 +3,13 @@ import { Connection, selectWebsocketConnection } from "./features/websocketSlice
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import scroll from "./Scroll.module.css";
-import { Button, Fab, IconButton, InputAdornment, Stack, TextField } from "@mui/material";
+import { Button, Fab, IconButton, InputAdornment, TextField } from "@mui/material";
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import SendIcon from '@mui/icons-material/Send';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
 import { navigate, setTitle } from "./features/uiSlice";
+import CloseDialog, { useCloseDialog } from "./CloseDialog";
 import { invoke } from "@tauri-apps/api";
 import LoggingEvents from "./LoggingEvents";
 
@@ -20,6 +21,7 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
     const dispatch = useAppDispatch();
     const identifier = Number(path);
     const connection: Connection | undefined = useAppSelector(selectWebsocketConnection(identifier));
+    const [closeDialogState, { openCloseDialog }] = useCloseDialog();
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -33,33 +35,14 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
         throw new Error();
     }
 
-
     const clientlog = connection.disconnection
         ? [connection.request, ...connection.messages, connection.disconnection]
         : [connection.request, ...connection.messages];
 
     return (
         <>
-            <div>
 
-                <Stack spacing={2} direction="row">
-                    <Button variant="contained"
-                        disabled={Boolean(connection.disconnection)}
-                        startIcon={<LinkOffIcon />} onClick={() => {
-                            invoke("close_client", { identifier }).catch(e => {
-                                alert("petó: " + e);
-                            });
-                        }}>
-                        Close
-                    </Button>
-
-                    <Button variant="outlined" startIcon={<InfoIcon />} onClick={() => {
-                        dispatch(navigate({ view: "clientinfo", path }))
-                    }}>
-                        Information
-                    </Button>
-                </Stack>
-            </div>
+            <div style={{ height: "1.5rem" }}></div>
             <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
                 <LoggingEvents className={scroll.scrolllist} clientlog={clientlog} />
             </div >
@@ -69,7 +52,6 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                         endAdornment: (
                             <InputAdornment position="end">
                                 <IconButton
-
                                     onClick={() => {
                                         setMessage('');
                                     }}
@@ -91,8 +73,24 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                     Send
                 </Button>
             </div>
+            <div className={scroll.topToolbar}>
+                <Fab variant="extended"
 
-            <div className={scroll.toolbar}>
+                    disabled={Boolean(connection.disconnection)} onClick={() => {
+                        openCloseDialog();
+                    }}>
+                    <LinkOffIcon sx={{ mr: 1 }} />Close
+                </Fab>
+                <Fab variant="extended" onClick={() => {
+                    dispatch(navigate({ view: "clientinfo", path }))
+                }}>
+                    <InfoIcon sx={{ mr: 1 }} />Info
+                </Fab>
+                <CloseDialog {...closeDialogState} onOK={({ status, reason }) => {
+                    invoke("close_client", { identifier, status, reason }).catch(e => {
+                        alert("petó: " + e);
+                    });
+                }} />
                 <Fab
                     size="medium"
                     aria-label={"back"}

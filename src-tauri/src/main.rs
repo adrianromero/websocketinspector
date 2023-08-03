@@ -26,7 +26,7 @@ mod server;
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
 struct ServerState {
     handle: JoinHandle<()>,
-    tx: Sender<()>,
+    stop_tx: Sender<()>,
     client_connections: ClientConnections,
 }
 
@@ -81,7 +81,7 @@ async fn start_server(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, TauriState>,
     address: String,
-) -> Result<(), ServerError> {
+) -> Result<SocketAddr, ServerError> {
     println!("Start server process");
 
     let socketaddress = address.parse::<SocketAddr>()?;
@@ -126,37 +126,48 @@ async fn start_server(
                 },
             );
 
-        let (tx, rx) = oneshot::channel::<()>();
-        let app_handle2 = app_handle.clone();
+        let (stop_tx, stop_rx) = oneshot::channel::<()>();
+        let (start_tx, start_rx) = oneshot::channel::<()>();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
+
         let result = warp::serve(chat).try_bind_with_graceful_shutdown(socketaddress, async move {
-            app_handle2
-                .emit_all(
-                    "server_status",
-                    server::ServerStatus {
-                        name: String::from("started"),
-                        address: Some(socketaddress),
-                    },
-                )
-                .unwrap();
-            drop(app_handle2);
-            rx.await.unwrap();
+            start_tx.send(()).unwrap();
+            stop_rx.await.unwrap();
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
+            // Close pending clients gratefully
+            println!("Bind signal finished.");
         });
 
         match result {
-            Ok((_, server)) => {
+            Ok((result_socketaddress, server)) => {
                 let handle = tokio::task::spawn(server);
                 *srv = Some(ServerState {
                     handle,
-                    tx,
+                    stop_tx,
                     client_connections,
                 });
+                start_rx.await.unwrap();
+                println!("Server Started bind terminated");
+
+                app_handle
+                    .emit_all(
+                        "server_status",
+                        server::ServerStatus {
+                            name: String::from("started"),
+                            address: Some(socketaddress),
+                        },
+                    )
+                    .unwrap();
+
+                return Ok(result_socketaddress);
             }
             Err(e) => {
                 *srv = mystate;
                 return Err(ServerError::BindError(e.to_string()));
             }
         }
-        return Ok(());
     }
 
     *srv = mystate;
@@ -247,21 +258,17 @@ async fn user_connected(
 async fn stop_server(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, TauriState>,
-) -> Result<(), ()> {
-    println!("Stop server process");
-
+) -> Result<(), ServerError> {
     let mut srv = state.write().await;
 
     let mystate = std::mem::replace(&mut *srv, None);
     if let Some(ServerState {
         handle,
-        tx,
+        stop_tx,
         client_connections: _,
     }) = mystate
     {
-        // TODO: Close all client connections first...
-
-        tx.send(()).unwrap();
+        stop_tx.send(()).unwrap();
         handle.await.unwrap();
         app_handle
             .emit_all(
@@ -272,19 +279,25 @@ async fn stop_server(
                 },
             )
             .unwrap();
-    } else {
-        println!("Server: No Server to stop");
+        return Ok(());
     }
 
-    Ok(())
+    Err(ServerError::BindError(String::from(
+        "Server already stopped",
+    )))
 }
 
 #[tauri::command]
-async fn close_client(state: tauri::State<'_, TauriState>, identifier: usize) -> Result<(), ()> {
+async fn close_client(
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    status: u16,
+    reason: String,
+) -> Result<(), ()> {
     let mut srv = state.write().await;
     if let Some(ServerState {
         handle: _,
-        tx: _,
+        stop_tx: _,
         client_connections,
     }) = &mut *srv
     {
@@ -294,8 +307,7 @@ async fn close_client(state: tauri::State<'_, TauriState>, identifier: usize) ->
             tx,
         }) = client_connections.read().await.get(&identifier)
         {
-            tx.send(Message::close_with(1009u16, "peeeepe hi fallau"))
-                .unwrap();
+            tx.send(Message::close_with(status, reason)).unwrap();
         } else {
             println!("Client not found");
         }
@@ -315,7 +327,7 @@ async fn send_text(
     let mut srv = state.write().await;
     if let Some(ServerState {
         handle: _,
-        tx: _,
+        stop_tx: _,
         client_connections,
     }) = &mut *srv
     {

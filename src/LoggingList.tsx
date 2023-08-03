@@ -22,9 +22,9 @@ const LoggingList: FC = () => {
     const onPause = () => dispatch(toggleClientLogActive());
 
     return (
-        <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
-            <LoggingEvents className={scroll.scrolllist} clientlog={clientlog} displayaddress />
-            <div className={scroll.toolbar}>
+        <>
+            <div style={{ height: "1.5rem" }}></div>
+            <div className={scroll.topToolbar}>
                 <Fab color="default"
                     size="medium"
                     aria-label="clear"
@@ -38,7 +38,12 @@ const LoggingList: FC = () => {
                     {clientlogactive ? <PauseIcon /> : <PlayArrowIcon />}
                 </Fab>
             </div>
-        </div>
+
+            <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
+                <LoggingEvents className={scroll.scrolllist} clientlog={clientlog} displayaddress />
+
+            </div>
+        </>
     );
 };
 

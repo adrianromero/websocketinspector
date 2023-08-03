@@ -33,34 +33,38 @@ const ClientInfo: FC<{ path?: string }> = ({ path }) => {
     }
 
     return (
-        <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
-            <div className={scroll.scrolllist + " " + styles.infocontent}>
-                <Typography variant="h6" >Client information</Typography>
-                <div>
-                    <span className={styles.infolabel}>Address: </span>
-                    <span>{requestpayload.client.address}</span>
+        <>
+            <div style={{ height: "1.5rem" }}></div>
+            <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
+                <div className={scroll.scrolllist + " " + styles.infocontent}>
+                    <Typography variant="h6" >Client information</Typography>
+                    <div>
+                        <span className={styles.infolabel}>Address: </span>
+                        <span>{requestpayload.client.address}</span>
+                    </div>
+                    <div>
+                        <span className={styles.infolabel}>Path: </span>
+                        <span>/{requestpayload.tail}</span>
+                    </div>
+                    <div>
+                        <span className={styles.infolabel}>Query: </span>
+                        <span>{JSON.stringify(requestpayload.query)}</span>
+                    </div>
+                    <Typography variant="h6" >Headers</Typography>
+                    {Array.from(Object.entries(requestpayload.headers)).map(
+                        ([key, value]) => {
+                            return (
+                                <div>
+                                    <span className={styles.infolabel}>{key}: </span>
+                                    <span>{value}</span>
+                                </div>
+                            );
+                        }
+                    )}
                 </div>
-                <div>
-                    <span className={styles.infolabel}>Path: </span>
-                    <span>/{requestpayload.tail}</span>
-                </div>
-                <div>
-                    <span className={styles.infolabel}>Query: </span>
-                    <span>{JSON.stringify(requestpayload.query)}</span>
-                </div>
-                <Typography variant="h6" >Headers</Typography>
-                {Array.from(Object.entries(requestpayload.headers)).map(
-                    ([key, value]) => {
-                        return (
-                            <div>
-                                <span className={styles.infolabel}>{key}: </span>
-                                <span>{value}</span>
-                            </div>
-                        );
-                    }
-                )}
-            </div>
-            <div className={scroll.toolbar}>
+
+            </div >
+            <div className={scroll.topToolbar}>
                 <Fab
                     size="medium"
                     aria-label={"back"}
@@ -68,7 +72,7 @@ const ClientInfo: FC<{ path?: string }> = ({ path }) => {
                     {<ArrowBackIcon />}
                 </Fab>
             </div>
-        </div >
+        </>
     );
 };
 

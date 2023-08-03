@@ -5,11 +5,12 @@ import {
     Button,
     Dialog,
     DialogActions,
-    DialogContent
+    DialogContent,
+    Backdrop,
+    CircularProgress
 } from "@mui/material";
 import PlayCircleFilledIcon from "@mui/icons-material/PlayCircleFilled";
 import WarningIcon from "@mui/icons-material/Warning";
-import SyncIcon from "@mui/icons-material/Sync";
 
 import {
     setClientStatus, selectClientStatus, selectServerStatus
@@ -34,7 +35,7 @@ const ServerForm: FC = () => {
     const serverstatus = useAppSelector(selectServerStatus);
     const clientstatus = useAppSelector(selectClientStatus);
     const listening = Boolean(serverstatus.address) && clientstatus === "started";
-
+    const stopped = serverstatus.name === "stopped" && clientstatus === "stopped";
 
     if (listening) {
         return null;
@@ -48,51 +49,23 @@ const ServerForm: FC = () => {
         setAddressError({ error: false, content: " " });
     };
 
-    let button;
-    if (clientstatus === "stopped" && serverstatus.name === "stopped") {
-        button = (
-            <Button
-                variant="contained"
-                startIcon={<PlayCircleFilledIcon />}
-                disabled={addressError.error}
-                onClick={(event: React.MouseEvent<HTMLElement>) => {
-                    dispatch(setClientStatus("started"));
-                    invoke("start_server", { address }).catch(e => {
-                        dispatch(setClientStatus("stopped"));
-                        openAlertDialog({
-                            title: "Start service",
-                            icon: (
-                                <WarningIcon color="warning" fontSize="large" />
-                            ),
-                            content: e as string,
-                        });
-                    });
-                }}
-            >
-                Start
-            </Button>
-        );
-    } else {
-        button = (
-            <Button variant="contained" startIcon={<SyncIcon />} disabled>
-                Start
-            </Button>
-        );
-    }
-
     return (
         <>
+
             <Dialog
                 open={true}
                 hideBackdrop
             >
+                <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={!stopped} >
+                    <CircularProgress color="inherit" />
+                </Backdrop>
                 <DialogContent className={styles.formcontent}>
                     <TextField
                         required
                         id="outlined-required"
                         label="Address"
                         size="small"
-                        disabled={serverstatus.name !== "stopped"}
+                        disabled={!stopped}
                         error={addressError.error}
                         helperText={addressError.content}
                         value={address}
@@ -105,9 +78,28 @@ const ServerForm: FC = () => {
                     />
                 </DialogContent>
                 <DialogActions>
-                    {button}
+                    <Button
+                        variant="contained"
+                        startIcon={<PlayCircleFilledIcon />}
+                        disabled={addressError.error || !stopped}
+                        onClick={(event: React.MouseEvent<HTMLElement>) => {
+                            dispatch(setClientStatus("started"));
+                            invoke("start_server", { address }).catch(e => {
+                                dispatch(setClientStatus("stopped"));
+                                openAlertDialog({
+                                    title: "Start service",
+                                    icon: (
+                                        <WarningIcon color="warning" fontSize="large" />
+                                    ),
+                                    content: e as string,
+                                });
+                            });
+                        }}
+                    >
+                        Start
+                    </Button>
                 </DialogActions>
-            </Dialog>
+            </Dialog >
             <AlertDialog {...alertDialogProperties} />
         </>
     );
