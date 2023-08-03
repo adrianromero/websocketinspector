@@ -1,6 +1,5 @@
 
 import type { FC } from 'react';
-import { PlayCircleFilled, PauseCircleFilled, ClockCircleFilled } from '@ant-design/icons';
 import { Connection } from './ClientList';
 import { Collapse } from 'antd';
 import "./ClientInfo.css";
