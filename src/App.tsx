@@ -1,24 +1,69 @@
 import React from "react";
 import type { FC } from "react";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
+
+import { invoke } from "@tauri-apps/api";
 import LoggingList from "./LoggingList";
 import ServerForm from "./ServerForm";
+
+import WebsocketListener from "./features/WebsocketListener";
+import {
+    setClientStatus, selectServerStatus, selectClientStatus
+} from "./features/websocketSlice";
+
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
+import ListItemIcon from '@mui/material/ListItemIcon';
+
+import MenuIcon from '@mui/icons-material/Menu';
+import Menu from "@mui/material/Menu";
+import { useAppSelector, useAppDispatch } from "./app/hooks";
+
+import { Divider, ListItemText, MenuItem } from "@mui/material";
+import { Settings, Logout } from "@mui/icons-material";
 import "./App.css";
 import ClientList from "./ClientList";
-import WebsocketListener from "./features/WebsocketListener";
-
-function a11yProps(index: number) {
-    return {
-        id: `simple-tab-${index}`,
-        "aria-controls": `simple-tabpanel-${index}`,
-    };
-}
 
 const App: FC = () => {
-    const [value, setValue] = React.useState<number>(0);
-    const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-        setValue(newValue);
+
+    const dispatch = useAppDispatch();
+    const serverstatus = useAppSelector(selectServerStatus);
+    const clientstatus = useAppSelector(selectClientStatus);
+    const listening = Boolean(serverstatus.address) && clientstatus === "started";
+
+    const [view, setView] = React.useState<string>("logging");
+
+    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
+    const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+    const handleDisconnect = () => {
+        setAnchorEl(null);
+        setView("logging");
+        dispatch(setClientStatus("stopped"));
+
+        invoke("stop_server").catch(e => {
+            dispatch(setClientStatus("started"));
+        });
+
+    };
+    const handleView = (v: string) => () => {
+        setView(v);
+        setAnchorEl(null);
+    };
+    const viewTitle = () => {
+        if (view === "logging") {
+            return "Events log";
+        }
+        if (view === "clients") {
+            return "Clients";
+        }
+        return "Unknown view";
     };
 
     return (
@@ -38,43 +83,106 @@ const App: FC = () => {
                     bottom: 0,
                 }}
             >
+                <AppBar position="static">
+                    <Toolbar>
+                        <IconButton
+                            size="large"
+                            edge="start"
+                            color="inherit"
+                            aria-label="menu"
+                            disabled={!listening}
+                            sx={{ mr: 2 }}
+                            onClick={handleClick}
+                        >
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                            {serverstatus.name === "started" ? viewTitle() : "Server configuration"}
+                        </Typography>
+                        {listening &&
+                            <Typography variant="body2">
+                                {`Listening on ${serverstatus.address}`}
+                            </Typography>
+                        }
+
+
+                    </Toolbar>
+                </AppBar>
+                <Menu
+                    anchorEl={anchorEl}
+                    id="account-menu"
+                    open={open}
+                    onClose={handleClose}
+                    onClick={handleClose}
+                    PaperProps={{
+                        elevation: 0,
+                        sx: {
+                            overflow: 'visible',
+                            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                            mt: 1.5,
+                            '& .MuiAvatar-root': {
+                                width: 32,
+                                height: 32,
+                                ml: -0.5,
+                                mr: 1,
+                            },
+                            '&:before': {
+                                content: '""',
+                                display: 'block',
+                                position: 'absolute',
+                                top: 0,
+                                left: 14,
+                                width: 10,
+                                height: 10,
+                                bgcolor: 'background.paper',
+                                transform: 'translateY(-50%) rotate(45deg)',
+                                zIndex: 0,
+                            },
+                        },
+                    }}
+                    transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                >
+                    <MenuItem onClick={handleView("logging")}>
+                        <ListItemIcon>
+                            <Settings fontSize="small" />
+                        </ListItemIcon>
+                        Events log
+                    </MenuItem>
+                    <MenuItem onClick={handleView("clients")}>
+                        <ListItemIcon>
+                            <Logout fontSize="small" />
+                        </ListItemIcon>
+                        Clients
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={handleDisconnect}>
+                        <ListItemIcon>
+                            <Logout fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Stop listening</ListItemText>
+                    </MenuItem>
+                </Menu>
+
+
                 <div className="wsheader">
                     <ServerForm />
                 </div>
-                <div
-                    className="wslogging"
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "stretch",
-                        flexGrow: 1,
-                    }}
-                >
-                    <Tabs
-                        value={value}
-                        onChange={handleChange}
-                        aria-label="tabs"
-                    >
-                        <Tab label="Log" {...a11yProps(0)} />
-                        <Tab label="Clients" {...a11yProps(1)} />
-                    </Tabs>
+                {
+                    serverstatus.name === "started" &&
                     <div
+                        className="wslogging"
                         style={{
-                            display: value !== 0 ? "none" : "",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "stretch",
                             flexGrow: 1,
                         }}
                     >
-                        <LoggingList />
+                        {view === "logging" && <LoggingList />}
+                        {view === "clients" && <ClientList />}
                     </div>
-                    <div
-                        style={{
-                            display: value !== 1 ? "none" : "",
-                            flexGrow: 1,
-                        }}
-                    >
-                        <ClientList />
-                    </div>
-                </div>
+                }
             </div>
         </>
     );

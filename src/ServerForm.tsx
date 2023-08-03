@@ -1,5 +1,5 @@
 import React from "react";
-import { FC, useState } from "react";
+import { FC } from "react";
 import { invoke } from "@tauri-apps/api";
 import {
     TextField,
@@ -16,14 +16,10 @@ import WarningIcon from "@mui/icons-material/Warning";
 import SyncIcon from "@mui/icons-material/Sync";
 
 import {
-    selectServerStatus
+    setClientStatus, selectClientStatus, selectServerStatus
 } from "./features/websocketSlice";
-import { useAppSelector } from "./app/hooks";
+import { useAppSelector, useAppDispatch } from "./app/hooks";
 import styles from "./ServerForm.module.css";
-
-export type ClientStatus = {
-    name: "started" | "stopped";
-};
 
 export type ErrorStatus = {
     error: boolean;
@@ -50,13 +46,15 @@ const ServerForm: FC = () => {
         error: false,
         content: " ",
     });
-
+    const dispatch = useAppDispatch();
     const serverstatus = useAppSelector(selectServerStatus);
+    const clientstatus = useAppSelector(selectClientStatus);
+    const listening = Boolean(serverstatus.address) && clientstatus === "started";
 
-    const [clientstatus, setClientStatus] = useState<ClientStatus>({
-        name: "stopped",
-    });
 
+    if (listening) {
+        return null;
+    }
 
     const openDialog = (values: DialogValues) => {
         setDialog({ open: true, ...values });
@@ -75,31 +73,16 @@ const ServerForm: FC = () => {
     };
 
     let button;
-    if (clientstatus.name === "started" && serverstatus.name === "started") {
-        button = (
-            <Button
-                variant="contained"
-                startIcon={<StopCircleIcon />}
-                onClick={() => {
-                    setClientStatus({ name: "stopped" });
-                    invoke("stop_server").catch(e => {
-                        setClientStatus({ name: "started" });
-                    });
-                }}
-            >
-                Stop server
-            </Button>
-        );
-    } else if (clientstatus.name === "stopped" && serverstatus.name === "stopped") {
+    if (clientstatus === "stopped" && serverstatus.name === "stopped") {
         button = (
             <Button
                 variant="contained"
                 startIcon={<PlayCircleFilledIcon />}
                 disabled={addressError.error}
                 onClick={(event: React.MouseEvent<HTMLElement>) => {
-                    setClientStatus({ name: "started" });
+                    dispatch(setClientStatus("started"));
                     invoke("start_server", { address }).catch(e => {
-                        setClientStatus({ name: "stopped" });
+                        dispatch(setClientStatus("stopped"));
                         openDialog({
                             title: "Start server",
                             icon: (
@@ -125,13 +108,7 @@ const ServerForm: FC = () => {
         <>
             <div
                 className={styles.serverformcontainer}
-                style={{
-                    display: "flex",
-                    alignItems: "start",
-                    gap: "0.5rem",
-                    marginLeft: "5rem",
-                    marginRight: "5rem",
-                }}
+
             >
                 <TextField
                     required
@@ -150,7 +127,9 @@ const ServerForm: FC = () => {
                         setAddress(event.target.value);
                     }}
                 />
-                {button}
+                <div>
+                    {button}
+                </div>
             </div>
             <Dialog
                 open={dialog.open}

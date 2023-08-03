@@ -124,6 +124,7 @@ async fn start_server(
                     "server_status",
                     server::ServerStatus {
                         name: String::from("started"),
+                        address: Some(socketaddress),
                     },
                 )
                 .unwrap();
@@ -239,6 +240,7 @@ async fn stop_server(
                 "server_status",
                 server::ServerStatus {
                     name: String::from("stopped"),
+                    address: None,
                 },
             )
             .unwrap();

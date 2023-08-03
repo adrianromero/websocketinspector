@@ -3,7 +3,10 @@ import { RootState } from "../app/store";
 
 export type ServerStatus = {
     name: "started" | "stopped";
+    address: string | null;
 };
+
+export type ClientStatus = "started" | "stopped";
 
 export type Client = {
     identifier: number;
@@ -73,6 +76,7 @@ export type LogEvent =
     | LogEventMessage;
 
 export interface WebsocketState {
+    clientstatus: ClientStatus;
     serverstatus: ServerStatus;
     connections: Map<number, Connection>;
     clientlog: LogEvent[];
@@ -80,7 +84,8 @@ export interface WebsocketState {
 }
 
 const initialState: WebsocketState = {
-    serverstatus: { name: "stopped" },
+    clientstatus: "stopped",
+    serverstatus: { name: "stopped", address: null },
     connections: new Map<number, Connection>(),
     clientlog: [],
     clientlogactive: true,
@@ -90,13 +95,17 @@ export const websocketSlice = createSlice({
     name: "websocket",
     initialState,
     reducers: {
+        // Client side dispatch actions
         clearClientLog: (state, action: PayloadAction<void>) => {
             state.clientlog = [];
         },
         toggleClientLogActive: (state, action: PayloadAction<void>) => {
             state.clientlogactive = !state.clientlogactive;
         },
-
+        setClientStatus: (state, action: PayloadAction<ClientStatus>) => {
+            state.clientstatus = action.payload;
+        },
+        // Server side dispatch actions
         setServerStatus: (state, action: PayloadAction<ServerStatus>) => {
             state.serverstatus = action.payload;
             state.connections = new Map<number, Connection>();
@@ -177,6 +186,7 @@ export const websocketSlice = createSlice({
 });
 
 export const {
+    setClientStatus,
     setServerStatus,
     openConnection,
     closeConnection,
@@ -191,6 +201,8 @@ export const {
 export const selectWebsocket = (state: RootState) => state.websocket;
 export const selectServerStatus = (state: RootState) =>
     state.websocket.serverstatus;
+export const selectClientStatus = (state: RootState) =>
+    state.websocket.clientstatus;
 export const selectWebsocketConnections = (state: RootState) =>
     state.websocket.connections;
 export const selectWebsocketConnection =
