@@ -66,7 +66,7 @@ fn main() {
             close_client,
         ])
         .run(tauri::generate_context!())
-        .expect("Error while running WebSocket Inspector");
+        .expect("Error raised while running WebSocket Inspector");
 }
 
 #[derive(Error, Debug)]
@@ -75,6 +75,8 @@ pub enum ServerError {
     AddressError(#[from] AddrParseError),
     #[error("BindError: {0}")]
     BindError(String),
+    #[error("StatusError: {0}")]
+    StatusError(String),
 }
 impl Serialize for ServerError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -84,6 +86,7 @@ impl Serialize for ServerError {
         match self {
             ServerError::AddressError(e) => serializer.serialize_str(&e.to_string()),
             ServerError::BindError(ref s) => serializer.serialize_str(s),
+            ServerError::StatusError(ref s) => serializer.serialize_str(s),
         }
     }
 }
@@ -154,7 +157,7 @@ async fn start_server(
             stop_rx.recv().await.unwrap();
 
             // tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
-            // Close pending clients gratefully
+            info!("Close pending clients gratefully");
             for client_connection in client_connections_close.read().await.values() {
                 client_connection.tx.send(Message::close()).unwrap();
             }
@@ -177,8 +180,7 @@ async fn start_server(
         };
     }
 
-    warn!("Server already started");
-    Err(ServerError::BindError(String::from(
+    Err(ServerError::StatusError(String::from(
         "Server already started",
     )))
 }
@@ -279,7 +281,7 @@ async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerEr
         return Ok(());
     }
 
-    Err(ServerError::BindError(String::from(
+    Err(ServerError::StatusError(String::from(
         "Server already stopped",
     )))
 }
@@ -290,7 +292,7 @@ async fn close_client(
     identifier: usize,
     status: u16,
     reason: String,
-) -> Result<(), ()> {
+) -> Result<(), ServerError> {
     let mut srv = state.write().await;
     let mystate = srv.as_mut();
     if let Some(ServerState {
@@ -306,14 +308,13 @@ async fn close_client(
         }) = client_connections.read().await.get(&identifier)
         {
             tx.send(Message::close_with(status, reason)).unwrap();
-        } else {
-            warn!("Client not found");
+            return Ok(());
         }
-    } else {
-        warn!("Server: No Server to stop");
+        return Err(ServerError::StatusError(String::from("Client not found.")));
     }
-
-    Ok(())
+    return Err(ServerError::StatusError(String::from(
+        "Server already stopped.",
+    )));
 }
 #[tauri::command]
 async fn send_text(
