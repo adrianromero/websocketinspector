@@ -29,7 +29,6 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tokio::task::JoinHandle;
 use warp::http::HeaderMap;
@@ -43,7 +42,7 @@ mod server;
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
 struct ServerState {
     handle: JoinHandle<()>,
-    stop_tx: Sender<()>,
+    stop_tx: UnboundedSender<()>,
     client_connections: ClientConnections,
 }
 
@@ -107,7 +106,7 @@ async fn start_server(
     let mut srv = state.write().await;
     let mystate = srv.as_mut();
 
-    if let None = mystate {
+    if mystate.is_none() {
         let client_connections = Arc::new(RwLock::new(HashMap::new()));
 
         let app_handle2 = app_handle.clone();
@@ -144,7 +143,7 @@ async fn start_server(
                 },
             );
 
-        let (stop_tx, stop_rx) = oneshot::channel::<()>();
+        let (stop_tx, mut stop_rx) = mpsc::unbounded_channel::<()>();
         let (start_tx, start_rx) = oneshot::channel::<()>();
 
         // tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
@@ -152,7 +151,7 @@ async fn start_server(
         let client_connections_close = client_connections.clone();
         let result = warp::serve(chat).try_bind_with_graceful_shutdown(socketaddress, async move {
             start_tx.send(()).unwrap();
-            stop_rx.await.unwrap();
+            stop_rx.recv().await.unwrap();
 
             // tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
             // Close pending clients gratefully
@@ -163,7 +162,7 @@ async fn start_server(
             info!("Bind signal finished.");
         });
 
-        match result {
+        return match result {
             Ok((result_socketaddress, server)) => {
                 let handle = tokio::task::spawn(server);
                 start_rx.await.unwrap();
@@ -172,14 +171,13 @@ async fn start_server(
                     stop_tx,
                     client_connections,
                 });
-                return Ok(result_socketaddress);
+                Ok(result_socketaddress)
             }
-            Err(e) => {
-                return Err(ServerError::BindError(e.to_string()));
-            }
-        }
+            Err(e) => Err(ServerError::BindError(e.to_string())),
+        };
     }
 
+    warn!("Server already started");
     Err(ServerError::BindError(String::from(
         "Server already started",
     )))
@@ -266,7 +264,7 @@ async fn user_connected(
 #[tauri::command]
 async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerError> {
     let mut srv = state.write().await;
-    let mystate = std::mem::replace(&mut *srv, None);
+    let mystate = srv.as_mut();
 
     if let Some(ServerState {
         handle,
@@ -276,7 +274,7 @@ async fn stop_server(state: tauri::State<'_, TauriState>) -> Result<(), ServerEr
     {
         stop_tx.send(()).unwrap();
         handle.await.unwrap();
-
+        *srv = None;
         info!("Server stopped");
         return Ok(());
     }
