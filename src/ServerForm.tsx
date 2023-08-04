@@ -29,7 +29,10 @@ import WarningIcon from "@mui/icons-material/Warning";
 import {
     setClientStatus, stopClientStatus
 } from "./features/websocketSlice";
-import AlertDialog, { useAlertDialog } from "./AlertDialog";
+import {
+    openAlertDialog
+} from "./features/alertDialogSlice";
+import AlertDialog from "./AlertDialog";
 import { useAppDispatch } from "./app/hooks";
 import styles from "./ServerForm.module.css";
 
@@ -39,7 +42,7 @@ export type ErrorStatus = {
 };
 
 const ServerForm: FC = () => {
-    const [alertDialogProperties, { openAlertDialog }] = useAlertDialog();
+
     const [address, setAddress] = useState("127.0.0.1:3030");
     const [addressError, setAddressError] = useState<ErrorStatus>({
         error: false,
@@ -54,7 +57,6 @@ const ServerForm: FC = () => {
     const hideError = () => {
         setAddressError({ error: false, content: " " });
     };
-
     return (
         <>
 
@@ -92,13 +94,13 @@ const ServerForm: FC = () => {
                                 })
                                 .catch(e => {
                                     dispatch(stopClientStatus());
-                                    openAlertDialog({
+                                    dispatch(openAlertDialog({
                                         title: "Start service",
                                         icon: (
                                             <WarningIcon color="warning" fontSize="large" />
                                         ),
-                                        content: e as string,
-                                    });
+                                        content: e as string
+                                    }));
                                 });
                         }}
                     >
@@ -106,7 +108,7 @@ const ServerForm: FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog >
-            <AlertDialog {...alertDialogProperties} />
+            <AlertDialog />
         </>
     );
 };

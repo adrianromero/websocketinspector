@@ -17,11 +17,13 @@
 import { configureStore, ThunkAction, Action } from "@reduxjs/toolkit";
 import websocketReducer from "../features/websocketSlice";
 import uiReducer from "../features/uiSlice";
+import aletDialogReducer from "../features/alertDialogSlice";
 
 export const store = configureStore({
     reducer: {
         websocket: websocketReducer,
         ui: uiReducer,
+        alertDialog: aletDialogReducer,
     },
 });
 

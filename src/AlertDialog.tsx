@@ -16,45 +16,20 @@
 
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
 
-import { FC, useState } from "react";
+import { FC } from "react";
 
-export type AlertDialogProperties = {
-    open: boolean;
-    closeAlertDialog?: () => void;
-    icon?: JSX.Element;
-    title?: string;
-    content?: string;
-};
-
-export type AlertDialogValues = {
-    icon?: JSX.Element;
-    title?: string;
-    content?: string;
-};
+import {
+    closeAlertDialog, selectAlertDialog
+} from "./features/alertDialogSlice";
+import { useAppDispatch, useAppSelector } from "./app/hooks";
 
 
-export type AlertDialogHook = () => [AlertDialogProperties, { openAlertDialog: (values: AlertDialogValues) => void, closeAlertDialog: () => void }];
-
-export const useAlertDialog: AlertDialogHook = () => {
-    const [alertDialogProperties, setDialog] = useState<AlertDialogProperties>({ open: false });
-
-    const closeAlertDialog = () => {
-        setDialog({ open: false });
-    };
-
-
-    const openAlertDialog = (values: AlertDialogValues) => {
-        setDialog({ open: true, closeAlertDialog, ...values });
-    };
-
-    return ([alertDialogProperties, { openAlertDialog, closeAlertDialog }]);
-};
-
-const AlertDialog: FC<AlertDialogProperties> = (props) => {
-    const { open, closeAlertDialog, icon, title, content } = props;
+const AlertDialog: FC<{}> = () => {
+    const dispatch = useAppDispatch();
+    const { open, icon, title, content } = useAppSelector(selectAlertDialog);
     return <Dialog
         open={open}
-        onClose={closeAlertDialog}
+        onClose={() => dispatch(closeAlertDialog())}
         aria-labelledby={title}
         aria-describedby={content}
     >
@@ -72,7 +47,7 @@ const AlertDialog: FC<AlertDialogProperties> = (props) => {
             </div>
         </DialogContent>
         <DialogActions>
-            <Button variant="contained" onClick={closeAlertDialog} autoFocus>
+            <Button variant="contained" onClick={() => dispatch(closeAlertDialog())} autoFocus>
                 OK
             </Button>
         </DialogActions>
