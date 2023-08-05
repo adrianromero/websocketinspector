@@ -19,7 +19,6 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
-import { enableMapSet } from "immer";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
@@ -28,7 +27,9 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
-enableMapSet();
+if (process.env.NODE_ENV !== "development") {
+    document.addEventListener('contextmenu', event => event.preventDefault());
+}
 
 const root = ReactDOM.createRoot(
     document.getElementById("root") as HTMLElement
