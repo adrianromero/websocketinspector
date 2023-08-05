@@ -74,7 +74,7 @@ const ClientList: FC = () => {
                                         >/{connection.request.payload.tail}</Typography>}
                                     />
                                     <div style={{ "marginRight": "1rem", width: "22rem" }}>
-                                        <Typography variant="body2" noWrap align="right" sx={{ color: 'text.secondary' }}>
+                                        <Typography variant="body2" noWrap sx={{ color: 'text.secondary' }}>
                                             {new Date(connection.request.time).toLocaleString()} - {connection.disconnection ? new Date(connection.disconnection.time).toLocaleString() : "..."}
                                         </Typography>
                                         <Typography variant="body2" noWrap sx={{ marginLeft: "8rem", color: 'text.secondary' }}>
