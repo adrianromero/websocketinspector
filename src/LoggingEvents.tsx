@@ -30,7 +30,6 @@ type SecondaryItemProps = {
 };
 const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph }: SecondaryItemProps) => {
     if (paragraph) {
-        console.log(paragraph.trim().length)
         if (paragraph.trim()) {
             return <Typography
                 sx={{
