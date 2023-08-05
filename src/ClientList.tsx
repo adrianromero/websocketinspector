@@ -42,7 +42,6 @@ const ClientList: FC = () => {
                         {Object.entries(connections).map((item) => {
                             const identifier = String(item[0]);
                             const connection = item[1] as Connection;
-                            const connectionTime = connection.request.time;
                             return <Fragment key={identifier}>
                                 <ListItem alignItems="flex-start"
                                     secondaryAction={
@@ -76,7 +75,7 @@ const ClientList: FC = () => {
                                     />
                                     <div style={{ "marginRight": "1rem", width: "22rem" }}>
                                         <Typography variant="body2" noWrap align="right" sx={{ color: 'text.secondary' }}>
-                                            {connectionTime.toLocaleString()} - {connection.disconnection ? connection.disconnection.time.toLocaleString() : "..."}
+                                            {new Date(connection.request.time).toLocaleString()} - {connection.disconnection ? new Date(connection.disconnection.time).toLocaleString() : "..."}
                                         </Typography>
                                         <Typography variant="body2" noWrap sx={{ marginLeft: "8rem", color: 'text.secondary' }}>
                                             Received messages: {connection.messages.filter(m => m.payload.direction === "CLIENT").length}

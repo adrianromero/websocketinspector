@@ -98,7 +98,7 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
                 secondary={<SecondaryItem paragraph={paragraph} />}
             />
             <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
-                {time.toLocaleString()}
+                {new Date(time).toLocaleString()}
             </Typography>
         </ListItem >
         <Divider component="li" />

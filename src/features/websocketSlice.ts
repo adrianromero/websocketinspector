@@ -55,19 +55,19 @@ export type Message = {
 
 export type LogEventMessage = {
     kind: "message";
-    time: Date;
+    time: number;
     payload: Message;
 };
 
 export type LogEventRequest = {
     kind: "connect";
-    time: Date;
+    time: number;
     payload: Request;
 };
 
 export type LogEventDisconnection = {
     kind: "disconnect";
-    time: Date;
+    time: number;
     payload: Disconnection;
 };
 
@@ -121,7 +121,7 @@ export const websocketSlice = createSlice({
             state.clientstatus = { ...state.clientstatus, ...action.payload };
         },
         openConnection: (state, action: PayloadAction<Request>) => {
-            const now = new Date();
+            const now = new Date().valueOf();
             state.connections[action.payload.client.identifier] = {
                 request: {
                     kind: "connect",
@@ -143,7 +143,7 @@ export const websocketSlice = createSlice({
             }
         },
         closeConnection: (state, action: PayloadAction<Disconnection>) => {
-            const now = new Date();
+            const now = new Date().valueOf();
             const current = state.connections[action.payload.client.identifier];
             if (current) {
                 current.disconnection = {
@@ -165,7 +165,7 @@ export const websocketSlice = createSlice({
             }
         },
         receiveMessage: (state, action: PayloadAction<Message>) => {
-            const now = new Date();
+            const now = new Date().valueOf();
             const current = state.connections[action.payload.client.identifier];
             if (current) {
                 current.messages.push({
