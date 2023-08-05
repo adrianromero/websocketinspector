@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { FC } from "react";
+import { FC, Fragment } from "react";
 import { List, ListItemAvatar, Avatar, ListItem, ListItemText, Divider, IconButton, Typography } from '@mui/material';
 
 import { green, red } from '@mui/material/colors';
@@ -43,8 +43,8 @@ const ClientList: FC = () => {
                             const identifier = String(item[0]);
                             const connection = item[1] as Connection;
                             const connectionTime = connection.request.time;
-                            return <>
-                                <ListItem key={identifier} alignItems="flex-start"
+                            return <Fragment key={identifier}>
+                                <ListItem alignItems="flex-start"
                                     secondaryAction={
                                         <IconButton onClick={() => {
                                             dispatch(navigate({
@@ -86,13 +86,13 @@ const ClientList: FC = () => {
                                         </Typography>
                                     </div>
                                 </ListItem>
-                                <Divider key={`separator-${identifier}`} component="li" />
-                            </>
+                                <Divider component="li" />
+                            </Fragment>
                         }
                         )}
                     </List>
                 </div>
-            </div>
+            </div >
         </>
     );
 };

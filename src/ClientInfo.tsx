@@ -62,10 +62,10 @@ const ClientInfo: FC<{ path?: string }> = ({ path }) => {
                         <span>{JSON.stringify(requestpayload.query)}</span>
                     </div>
                     <Typography variant="h6" >Headers</Typography>
-                    {Array.from(Object.entries(requestpayload.headers)).map(
+                    {Object.entries(requestpayload.headers).map(
                         ([key, value]) => {
                             return (
-                                <div>
+                                <div key={key}>
                                     <span className={styles.infolabel}>{key}: </span>
                                     <span>{value}</span>
                                 </div>

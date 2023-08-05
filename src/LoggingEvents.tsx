@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { FC, ReactNode, useEffect, useRef } from "react";
+import { FC, Fragment, ReactNode, useEffect, useRef } from "react";
 
 import { Avatar, Divider, List, ListItem, ListItemAvatar, ListItemText, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
@@ -124,7 +124,7 @@ const LoggingEvents: FC<LoggingEventsProps> = (props: LoggingEventsProps) => {
     return (
         <div ref={listRef} className={className}>
             <List sx={{ bgcolor: 'background.paper' }} dense disablePadding>
-                {clientlog.map(logEvent => <LoggingItem logEvent={logEvent} displayaddress={displayaddress} />)}
+                {clientlog.map(logEvent => <Fragment key={String(logEvent.time)}><LoggingItem logEvent={logEvent} displayaddress={displayaddress} /></Fragment>)}
             </List >
         </div >
     );
