@@ -23,7 +23,7 @@ import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import { green, red, blue } from '@mui/material/colors';
 import type { LogEvent } from "./features/websocketSlice"
-
+import styles from "./LoggingEvents.module.css";
 
 type SecondaryItemProps = {
     paragraph: string;
@@ -32,11 +32,7 @@ const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph }: SecondaryItemProps
     if (paragraph) {
         if (paragraph.trim()) {
             return <Typography
-                sx={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                }}
+                component="span"
                 variant="body2"
                 color="text.secondary"
             >{paragraph}</Typography>;
@@ -96,6 +92,7 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
             <ListItemText
                 primary={label}
                 secondary={<SecondaryItem paragraph={paragraph} />}
+                className={styles.loggingEventItemText}
             />
             <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
                 {new Date(time).toLocaleString()}

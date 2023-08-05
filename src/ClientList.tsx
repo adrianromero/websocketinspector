@@ -24,9 +24,10 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Connection, selectWebsocketConnections } from "./features/websocketSlice";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
+import { navigate } from "./features/uiSlice";
 
 import scroll from "./Scroll.module.css";
-import { navigate } from "./features/uiSlice";
+import styles from "./ClientList.module.css";
 
 const ClientList: FC = () => {
     const dispatch = useAppDispatch();
@@ -64,14 +65,11 @@ const ClientList: FC = () => {
                                     <ListItemText
                                         primary={connection.request.payload.client.address}
                                         secondary={<Typography
-                                            sx={{
-                                                whiteSpace: "nowrap",
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis"
-                                            }}
+                                            component="span"
                                             variant="body2"
                                             color="text.secondary"
                                         >/{connection.request.payload.tail}</Typography>}
+                                        className={styles.clietItemText}
                                     />
                                     <div style={{ "marginRight": "1rem", width: "22rem" }}>
                                         <Typography variant="body2" noWrap sx={{ color: 'text.secondary' }}>
