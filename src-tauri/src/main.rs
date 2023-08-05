@@ -162,7 +162,7 @@ async fn start_server(
                 client_connection.tx.send(Message::close()).unwrap();
             }
 
-            info!("Bind signal finished.");
+            info!("Bind signal finished");
         });
 
         return match result {
@@ -200,7 +200,7 @@ async fn user_connected(
     tokio::task::spawn(async move {
         while let Some(message) = rx.recv().await {
             user_ws_tx.send(message).await.unwrap_or_else(|e| {
-                warn!("websocket send error: {}", e);
+                warn!("WebSocket send error: {}", e);
             });
         }
     });
@@ -234,7 +234,7 @@ async fn user_connected(
         let msg = match result {
             Ok(msg) => msg,
             Err(e) => {
-                warn!("websocket error: {}", e);
+                warn!("WebSocket error: {}", e);
                 break;
             }
         };
@@ -313,7 +313,7 @@ async fn close_client(
         return Err(ServerError::StatusError(String::from("Client not found.")));
     }
     return Err(ServerError::StatusError(String::from(
-        "Server already stopped.",
+        "Server already stopped",
     )));
 }
 #[tauri::command]
@@ -354,7 +354,7 @@ async fn send_text(
             warn!("Client not found");
         }
     } else {
-        warn!("Server: No Server to stop");
+        warn!("No Server to stop");
     }
 
     Ok(())
