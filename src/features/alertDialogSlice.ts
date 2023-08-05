@@ -47,7 +47,7 @@ export const alertDialogSlice = createSlice({
             state.title = action.payload.title;
             state.content = action.payload.content;
         },
-        closeAlertDialog: (state, action: PayloadAction<void>) => {
+        closeAlertDialog: state => {
             state.open = false;
             state.icon = undefined;
             state.title = undefined;
