@@ -22,7 +22,7 @@ import { green, red } from '@mui/material/colors';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { selectWebsocketConnections } from "./features/websocketSlice";
+import { Connection, selectWebsocketConnections } from "./features/websocketSlice";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 
 import scroll from "./Scroll.module.css";
@@ -31,8 +31,6 @@ import { navigate } from "./features/uiSlice";
 const ClientList: FC = () => {
     const dispatch = useAppDispatch();
     const connections = useAppSelector(selectWebsocketConnections);
-    const items = Array.from(connections.entries()).map(
-        ([identifier, connection]) => ({ identifier, connection }));
 
     return (
         <>
@@ -41,16 +39,17 @@ const ClientList: FC = () => {
             <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
                 <div className={scroll.scrolllist} >
                     <List sx={{ bgcolor: 'background.paper' }} dense disablePadding>
-                        {items.map((item) => {
-                            const { connection } = item;
+                        {Object.entries(connections).map((item) => {
+                            const identifier = String(item[0]);
+                            const connection = item[1] as Connection;
                             const connectionTime = connection.request.time;
                             return <>
-                                <ListItem alignItems="flex-start"
+                                <ListItem key={identifier} alignItems="flex-start"
                                     secondaryAction={
                                         <IconButton onClick={() => {
                                             dispatch(navigate({
                                                 view: "client",
-                                                path: String(item.identifier)
+                                                path: identifier
                                             }))
                                         }} edge="end" aria-label="delete">
                                             <ChevronRightIcon />
@@ -87,7 +86,7 @@ const ClientList: FC = () => {
                                         </Typography>
                                     </div>
                                 </ListItem>
-                                <Divider component="li" />
+                                <Divider key={`separator-${identifier}`} component="li" />
                             </>
                         }
                         )}

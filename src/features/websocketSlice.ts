@@ -82,16 +82,20 @@ export type Connection = {
     disconnection?: LogEventDisconnection;
 };
 
+export interface MapConnection {
+    [key: number]: Connection;
+}
+
 export interface WebsocketState {
     clientstatus: ClientStatus;
-    connections: Map<number, Connection>;
+    connections: MapConnection;
     clientlog: LogEvent[];
     clientlogactive: boolean;
 }
 
 const initialState: WebsocketState = {
     clientstatus: { name: "stopped" },
-    connections: new Map<number, Connection>(),
+    connections: {},
     clientlog: [],
     clientlogactive: true,
 };
@@ -109,7 +113,7 @@ export const websocketSlice = createSlice({
         },
         stopClientStatus: (state, action: PayloadAction<void>) => {
             state.clientstatus = { name: "stopped" };
-            state.connections = new Map<number, Connection>();
+            state.connections = {};
             state.clientlog = [];
             state.clientlogactive = true;
         },
@@ -118,14 +122,14 @@ export const websocketSlice = createSlice({
         },
         openConnection: (state, action: PayloadAction<Request>) => {
             const now = new Date();
-            state.connections.set(action.payload.client.identifier, {
+            state.connections[action.payload.client.identifier] = {
                 request: {
                     kind: "connect",
                     time: now,
                     payload: action.payload,
                 },
                 messages: [],
-            });
+            };
             // Logging
             if (state.clientlogactive) {
                 state.clientlog = [
@@ -140,9 +144,7 @@ export const websocketSlice = createSlice({
         },
         closeConnection: (state, action: PayloadAction<Disconnection>) => {
             const now = new Date();
-            const current = state.connections.get(
-                action.payload.client.identifier
-            );
+            const current = state.connections[action.payload.client.identifier];
             if (current) {
                 current.disconnection = {
                     kind: "disconnect",
@@ -164,9 +166,7 @@ export const websocketSlice = createSlice({
         },
         receiveMessage: (state, action: PayloadAction<Message>) => {
             const now = new Date();
-            const current = state.connections.get(
-                action.payload.client.identifier
-            );
+            const current = state.connections[action.payload.client.identifier];
             if (current) {
                 current.messages.push({
                     kind: "message",
@@ -210,7 +210,7 @@ export const selectWebsocketConnections = (state: RootState) =>
 export const selectWebsocketConnection =
     (identifier: number | undefined) => (state: RootState) =>
         typeof identifier === "number"
-            ? state.websocket.connections.get(identifier)
+            ? state.websocket.connections[identifier]
             : undefined;
 export const selectClientLog = (state: RootState) => state.websocket.clientlog;
 export const selectClientLogActive = (state: RootState) =>
