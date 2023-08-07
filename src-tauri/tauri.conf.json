@@ -8,7 +8,7 @@
     },
     "package": {
         "productName": "websocketinspector",
-        "version": "0.1.1001"
+        "version": "0.1.1002"
     },
     "tauri": {
         "allowlist": {
