@@ -16,30 +16,78 @@
 
 import { FC, Fragment, ReactNode, useEffect, useRef } from "react";
 
-import { Avatar, Divider, List, ListItem, ListItemAvatar, ListItemText, Typography } from "@mui/material";
+import { Avatar, Divider, List, ListItem, ListItemAvatar, ListItemText, SxProps, Theme, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import { green, red, blue } from '@mui/material/colors';
+import CryptoJS from "crypto-js";
 import type { LogEvent } from "./features/websocketSlice"
+import {
+    selectMessageFormat
+} from "./features/messageFormatSlice";
+import { useAppSelector } from "./app/hooks";
 import styles from "./LoggingEvents.module.css";
 
 type SecondaryItemProps = {
-    paragraph: string;
+    paragraph?: string;
+    sx?: SxProps<Theme>;
+    color?: string;
 };
-const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph }: SecondaryItemProps) => {
+const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, sx, color = "text.secondary" }: SecondaryItemProps) => {
     if (paragraph) {
         if (paragraph.trim()) {
             return <Typography
+                sx={sx}
                 component="span"
                 variant="body2"
-                color="text.secondary"
+                color={color}
             >{paragraph}</Typography>;
         }
-        return <Typography variant="body2" color="text.disabled">{"<blank>"}</Typography>;
+        return <Typography sx={sx} variant="body2" color="text.disabled">{"<blank>"}</Typography>;
     }
-    return <Typography variant="body2" color="text.disabled">{"<empty>"}</Typography>;
+    return <Typography sx={sx} variant="body2" color="text.disabled">{"<empty>"}</Typography>;
+}
+
+const codesx = { fontFamily: "monospace" };
+
+const wrap = (f: () => string) => {
+    try {
+        return <SecondaryItem sx={codesx} paragraph={f()} />;
+    } catch (error) {
+        if (error instanceof Error) {
+            return <SecondaryItem sx={codesx} color="text.disabled" paragraph={`<${error.message}>`} />;
+        }
+        return <SecondaryItem sx={codesx} color="text.disabled" paragraph="<Unknown format error>" />;
+    }
+}
+const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
+    const words: number[] = [];
+
+    for (let i = 0; i < uint8Array.length; i += 4) {
+        const word = (uint8Array[i] << 24) |
+            (uint8Array[i + 1] << 16) |
+            (uint8Array[i + 2] << 8) |
+            uint8Array[i + 3];
+        words.push(word);
+    }
+
+    return CryptoJS.lib.WordArray.create(words, uint8Array.length);
+}
+
+const transformTEXT = {
+    "PLAIN": (msg: string) => wrap(() => msg),
+    "JSON": (msg: string) => wrap(() => JSON.stringify(JSON.parse(msg), null, 2)),
+    "BASE64": (msg: string) => wrap(() => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(msg))),
+    "HEXADECIMAL": (msg: string) => wrap(() => CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(msg))),
+}
+
+const transformBINARY = {
+    "PLAIN": (msg: number[]) => wrap(() => CryptoJS.enc.Utf8.stringify(toWordArray(msg))),
+    "JSON": (msg: number[]) => wrap(() => JSON.stringify(JSON.parse(CryptoJS.enc.Utf8.stringify(toWordArray(msg))), null, 2)),
+    "BASE64": (msg: number[]) => wrap(() => CryptoJS.enc.Base64.stringify(toWordArray(msg))),
+    "HEXADECIMAL": (msg: number[]) => wrap(() => CryptoJS.enc.Hex.stringify(toWordArray(msg))),
 }
 
 type LoggingItemProps = {
@@ -47,23 +95,23 @@ type LoggingItemProps = {
     displayaddress?: boolean;
 };
 const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: LoggingItemProps) => {
-
+    const { format } = useAppSelector(selectMessageFormat);
     const { kind, time, payload } = logEvent;
     let label: string;
     let icon: ReactNode;
-    let paragraph: string;
+    let secondary: ReactNode;
     const address = displayaddress ? ` ${payload.client.address}` : "";
 
     if (kind === "connect") {
         label = "CONNECT" + address;
         icon = <Avatar sx={{ bgcolor: green[500], height: 24, width: 24 }} ><LinkIcon sx={{ fontSize: 16 }} /></Avatar>;
-        paragraph = "/" + payload.tail;
+        secondary = <SecondaryItem paragraph={"/" + payload.tail} />;
     } else if (kind === "disconnect") {
         label = "DISCONNECT" + address;
         icon = <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>;
-        paragraph = payload.message
+        secondary = <SecondaryItem paragraph={payload.message
             ? `${payload.message.code}: ${payload.message.reason}`
-            : "unknown:";
+            : ""} />;
 
     } else if (kind === "message") {
         icon = payload.direction === "CLIENT"
@@ -71,18 +119,18 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
             : <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallMadeIcon sx={{ fontSize: 16 }} /></Avatar>;
         if ("TEXT" in payload.message) {
             label = "TEXT" + address;
-            paragraph = payload.message.TEXT.msg;
+            secondary = transformTEXT[format](payload.message.TEXT.msg);
         } else if ("BINARY" in payload.message) {
             label = "BINARY" + address;
-            paragraph = "BASE64"; // payload.message.BINARY.msg;
+            secondary = transformBINARY[format](payload.message.BINARY.msg);
         } else {
             label = "UNKNOWN" + address;
-            paragraph = "";
+            secondary = <SecondaryItem sx={codesx} />;
         }
     } else {
-        label = "UNKNOWN";
+        label = "UNKNOWN TYPE";
         icon = null;
-        paragraph = "";
+        secondary = <SecondaryItem />;
     }
     return (<>
         <ListItem alignItems="flex-start">
@@ -91,7 +139,7 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
             </ListItemAvatar>
             <ListItemText
                 primary={label}
-                secondary={<SecondaryItem paragraph={paragraph} />}
+                secondary={secondary}
                 className={styles.loggingEventItemText}
             />
             <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>

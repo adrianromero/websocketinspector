@@ -21,6 +21,7 @@ import { Fab } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
+import MessageFormat from './MessageFormat';
 import {
     clearClientLog, toggleClientLogActive, selectClientLogActive, selectClientLog
 } from "./features/websocketSlice";
@@ -41,6 +42,7 @@ const LoggingList: FC = () => {
         <>
             <div style={{ height: "1.5rem" }}></div>
             <div className={scroll.topToolbar}>
+                <MessageFormat />
                 <Fab color="default"
                     size="medium"
                     aria-label="clear"
