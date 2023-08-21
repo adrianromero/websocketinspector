@@ -16,7 +16,7 @@
 
 import { FC, Fragment, ReactNode, useEffect, useRef } from "react";
 
-import { Avatar, Divider, List, ListItem, ListItemAvatar, ListItemText, SxProps, Theme, Typography } from "@mui/material";
+import { Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, ListItemText, SxProps, Theme, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
@@ -27,8 +27,10 @@ import type { LogEvent } from "./features/websocketSlice"
 import {
     selectMessageFormat
 } from "./features/messageFormatSlice";
-import { useAppSelector } from "./app/hooks";
+import { useAppDispatch, useAppSelector } from "./app/hooks";
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import styles from "./LoggingEvents.module.css";
+import { navigate } from "./features/uiSlice";
 
 type SecondaryItemProps = {
     paragraph?: string;
@@ -40,17 +42,22 @@ const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, sx, color = "text.se
         if (paragraph.trim()) {
             return <Typography
                 sx={sx}
-                component="span"
                 variant="body2"
                 color={color}
+                noWrap
             >{paragraph}</Typography>;
         }
-        return <Typography sx={sx} variant="body2" color="text.disabled">{"<blank>"}</Typography>;
+        return <Typography sx={sx} variant="body2" color="text.disabled" noWrap>{"<blank>"}</Typography>;
     }
-    return <Typography sx={sx} variant="body2" color="text.disabled">{"<empty>"}</Typography>;
+    return <Typography sx={sx} variant="body2" color="text.disabled" noWrap>{"<empty>"}</Typography>;
 }
 
-const codesx = { fontFamily: "monospace" };
+const codesx = {
+    fontFamily: "monospace",
+    // whiteSpace: "nowrap",
+    // overflow: "hidden",
+    // textOverflow: "ellipsis",
+};
 
 const wrap = (f: () => string) => {
     try {
@@ -96,6 +103,7 @@ type LoggingItemProps = {
 };
 const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: LoggingItemProps) => {
     const { format } = useAppSelector(selectMessageFormat);
+    const dispatch = useAppDispatch();
     const { kind, time, payload } = logEvent;
     let label: string;
     let icon: ReactNode;
@@ -133,18 +141,34 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
         secondary = <SecondaryItem />;
     }
     return (<>
-        <ListItem alignItems="flex-start">
+        <ListItem alignItems="flex-start"
+            secondaryAction={
+                <IconButton onClick={() => {
+                    dispatch(navigate({
+                        view: "client",
+                        path: "pepe"
+                    }))
+                }} edge="end" aria-label="delete">
+                    <ChevronRightIcon />
+                </IconButton>
+            }>
             <ListItemAvatar>
                 {icon}
             </ListItemAvatar>
-            <ListItemText
-                primary={label}
-                secondary={secondary}
-                className={styles.loggingEventItemText}
-            />
-            <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
+            <div className={styles.loggingEventItemText}>
+                <div className={styles.loggingEventItemLine1} >
+                    <Typography className={styles.loggingEventItemLine1Label} variant="body1" noWrap >
+                        {label}
+                    </Typography>
+                    <Typography className={styles.loggingEventItemLine1Date} variant="body2" noWrap display="inline" align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
+                        {new Date(time).toLocaleString()}
+                    </Typography>
+                </div>
+                <div>{secondary}</div>
+            </div>
+            {/* <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
                 {new Date(time).toLocaleString()}
-            </Typography>
+            </Typography> */}
         </ListItem >
         <Divider component="li" />
     </>

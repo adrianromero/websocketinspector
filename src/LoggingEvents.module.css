@@ -15,8 +15,17 @@
    this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-.loggingEventItemText > :global(.MuiListItemText-secondary) {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.loggingEventItemText {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.loggingEventItemLine1 {
+    display: flex;
+}
+
+.loggingEventItemLine1Label {
+    flex: 1 1 auto;
 }
