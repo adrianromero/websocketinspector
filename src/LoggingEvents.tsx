@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { FC, Fragment, ReactNode, useEffect, useRef } from "react";
-
-import { Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, SxProps, Theme, Typography } from "@mui/material";
+import { FC, Fragment, ReactNode, useState, useEffect, useRef } from "react";
+import { writeText } from '@tauri-apps/api/clipboard';
+import { Alert, Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, Snackbar, SxProps, Theme, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
@@ -29,6 +29,7 @@ import {
 } from "./features/messageFormatSlice";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import styles from "./LoggingEvents.module.css";
 import { navigate } from "./features/uiSlice";
 
@@ -36,39 +37,26 @@ type SecondaryItemProps = {
     paragraph?: string;
     sx?: SxProps<Theme>;
     color?: string;
+    className?: string;
 };
-const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, sx, color = "text.secondary" }: SecondaryItemProps) => {
+const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, className, sx, color = "text.secondary" }: SecondaryItemProps) => {
     if (paragraph) {
         if (paragraph.trim()) {
             return <Typography
+                className={className}
                 sx={sx}
                 variant="body2"
                 color={color}
                 noWrap
             >{paragraph}</Typography>;
         }
-        return <Typography sx={sx} variant="body2" color="text.disabled" noWrap>{"<blank>"}</Typography>;
+        return <Typography className={className} sx={sx} variant="body2" color="text.disabled" noWrap>{"<blank>"}</Typography>;
     }
-    return <Typography sx={sx} variant="body2" color="text.disabled" noWrap>{"<empty>"}</Typography>;
+    return <Typography className={className} sx={sx} variant="body2" color="text.disabled" noWrap>{"<empty>"}</Typography>;
 }
 
-const codesx = {
-    fontFamily: "monospace",
-};
-
-const wrap = (f: () => string) => {
-    try {
-        return <SecondaryItem sx={codesx} paragraph={f()} />;
-    } catch (error) {
-        if (error instanceof Error) {
-            return <SecondaryItem sx={codesx} color="text.disabled" paragraph={`<${error.message}>`} />;
-        }
-        return <SecondaryItem sx={codesx} color="text.disabled" paragraph="<Unknown format error>" />;
-    }
-}
 const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
     const words: number[] = [];
-
     for (let i = 0; i < uint8Array.length; i += 4) {
         const word = (uint8Array[i] << 24) |
             (uint8Array[i + 1] << 16) |
@@ -76,23 +64,12 @@ const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
             uint8Array[i + 3];
         words.push(word);
     }
-
     return CryptoJS.lib.WordArray.create(words, uint8Array.length);
 }
 
-const transformTEXT = {
-    "PLAIN": (msg: string) => wrap(() => msg),
-    "JSON": (msg: string) => wrap(() => JSON.stringify(JSON.parse(msg), null, 2)),
-    "BASE64": (msg: string) => wrap(() => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(msg))),
-    "HEXADECIMAL": (msg: string) => wrap(() => CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(msg))),
-}
-
-const transformBINARY = {
-    "PLAIN": (msg: number[]) => wrap(() => CryptoJS.enc.Utf8.stringify(toWordArray(msg))),
-    "JSON": (msg: number[]) => wrap(() => JSON.stringify(JSON.parse(CryptoJS.enc.Utf8.stringify(toWordArray(msg))), null, 2)),
-    "BASE64": (msg: number[]) => wrap(() => CryptoJS.enc.Base64.stringify(toWordArray(msg))),
-    "HEXADECIMAL": (msg: number[]) => wrap(() => CryptoJS.enc.Hex.stringify(toWordArray(msg))),
-}
+const codesx = {
+    fontFamily: "monospace",
+};
 
 type LoggingItemProps = {
     logEvent: LogEvent;
@@ -101,11 +78,44 @@ type LoggingItemProps = {
 const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: LoggingItemProps) => {
     const { format } = useAppSelector(selectMessageFormat);
     const dispatch = useAppDispatch();
+    const [openSnackbar, setSnackbar] = useState(false);
+
     const { kind, time, payload } = logEvent;
     let label: string;
     let icon: ReactNode;
     let secondary: ReactNode;
     const address = displayaddress ? ` ${payload.client.address}` : "";
+
+    const wrap = (f: () => string) => {
+        try {
+            const paragraph = f();
+            return <div className={styles.loggingEventItemLine2}>
+                <SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} paragraph={paragraph} />
+                <IconButton aria-label="copy" size="small" onClick={() => writeText(paragraph).then(() => { setSnackbar(true) })}>
+                    <ContentCopyIcon fontSize="inherit" />
+                </IconButton>
+            </div>
+        } catch (error) {
+            if (error instanceof Error) {
+                return <div className={styles.loggingEventItemLine2}><SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} color="text.disabled" paragraph={`<${error.message}>`} /></div>;
+            }
+            return <div className={styles.loggingEventItemLine2}><SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} color="text.disabled" paragraph="<Unknown format error>" /></div>;
+        }
+    }
+
+    const transformTEXT = {
+        "PLAIN": (msg: string) => wrap(() => msg),
+        "JSON": (msg: string) => wrap(() => JSON.stringify(JSON.parse(msg), null, 2)),
+        "BASE64": (msg: string) => wrap(() => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(msg))),
+        "HEXADECIMAL": (msg: string) => wrap(() => CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(msg))),
+    }
+
+    const transformBINARY = {
+        "PLAIN": (msg: number[]) => wrap(() => CryptoJS.enc.Utf8.stringify(toWordArray(msg))),
+        "JSON": (msg: number[]) => wrap(() => JSON.stringify(JSON.parse(CryptoJS.enc.Utf8.stringify(toWordArray(msg))), null, 2)),
+        "BASE64": (msg: number[]) => wrap(() => CryptoJS.enc.Base64.stringify(toWordArray(msg))),
+        "HEXADECIMAL": (msg: number[]) => wrap(() => CryptoJS.enc.Hex.stringify(toWordArray(msg))),
+    }
 
     if (kind === "connect") {
         label = "CONNECT" + address;
@@ -163,11 +173,16 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
                 </div>
                 <div>{secondary}</div>
             </div>
-            {/* <Typography variant="body2" noWrap align="right" sx={{ minWidth: 200, color: 'text.secondary' }}>
-                {new Date(time).toLocaleString()}
-            </Typography> */}
         </ListItem >
         <Divider component="li" />
+        <Snackbar
+            open={openSnackbar}
+            onClose={() => setSnackbar(false)}
+            autoHideDuration={1000}
+            message="Message copied"
+        >
+            <Alert severity="success">Message copied!</Alert>
+        </Snackbar>
     </>
     );
 }

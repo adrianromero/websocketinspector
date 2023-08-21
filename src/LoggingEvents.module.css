@@ -29,3 +29,7 @@
 .loggingEventItemLine1Label {
     flex: 1 1 auto;
 }
+
+.loggingEventItemLine2 {
+    display: flex;
+}
