@@ -16,7 +16,7 @@
 
 import { FC, Fragment, ReactNode, useEffect, useRef } from "react";
 
-import { Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, ListItemText, SxProps, Theme, Typography } from "@mui/material";
+import { Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, SxProps, Theme, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
@@ -54,9 +54,6 @@ const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, sx, color = "text.se
 
 const codesx = {
     fontFamily: "monospace",
-    // whiteSpace: "nowrap",
-    // overflow: "hidden",
-    // textOverflow: "ellipsis",
 };
 
 const wrap = (f: () => string) => {
