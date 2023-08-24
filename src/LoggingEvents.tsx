@@ -16,7 +16,7 @@
 
 import { FC, Fragment, ReactNode, useState, useEffect, useRef } from "react";
 import { writeText } from '@tauri-apps/api/clipboard';
-import { Alert, Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, Snackbar, SxProps, Theme, Typography } from "@mui/material";
+import { Alert, Avatar, Divider, IconButton, List, ListItem, ListItemAvatar, Snackbar, Typography } from "@mui/material";
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
@@ -35,24 +35,37 @@ import { navigate } from "./features/uiSlice";
 
 type SecondaryItemProps = {
     paragraph?: string;
-    sx?: SxProps<Theme>;
     color?: string;
-    className?: string;
+    copy?: boolean;
 };
-const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, className, sx, color = "text.secondary" }: SecondaryItemProps) => {
+const SecondaryItem: FC<SecondaryItemProps> = ({ paragraph, color = "text.secondary", copy = false }: SecondaryItemProps) => {
+    const [openSnackbar, setSnackbar] = useState(false);
     if (paragraph) {
         if (paragraph.trim()) {
-            return <Typography
-                className={className}
-                sx={sx}
-                variant="body2"
-                color={color}
-                noWrap
-            >{paragraph}</Typography>;
+            return <>
+                <Typography
+                    component="pre"
+                    className={styles.loggingEventItemLine2Content}
+                    variant="body2"
+                    color={color}
+
+                >{paragraph}</Typography >
+                {copy && <IconButton aria-label="copy" size="small" onClick={() => writeText(paragraph).then(() => { setSnackbar(true) })}>
+                    <ContentCopyIcon fontSize="inherit" />
+                </IconButton>}
+                <Snackbar
+                    open={openSnackbar}
+                    onClose={() => setSnackbar(false)}
+                    autoHideDuration={1000}
+                    message="Message copied"
+                >
+                    <Alert severity="success">Message copied!</Alert>
+                </Snackbar>
+            </>;
         }
-        return <Typography className={className} sx={sx} variant="body2" color="text.disabled" noWrap>{"<blank>"}</Typography>;
+        return <Typography className={styles.loggingEventItemLine2ContentDisabled} variant="body2" color="text.disabled" noWrap>{"<blank>"}</Typography>;
     }
-    return <Typography className={className} sx={sx} variant="body2" color="text.disabled" noWrap>{"<empty>"}</Typography>;
+    return <Typography className={styles.loggingEventItemLine2ContentDisabled} variant="body2" color="text.disabled" noWrap>{"<empty>"}</Typography>;
 }
 
 const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
@@ -67,10 +80,6 @@ const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
     return CryptoJS.lib.WordArray.create(words, uint8Array.length);
 }
 
-const codesx = {
-    fontFamily: "monospace",
-};
-
 type LoggingItemProps = {
     logEvent: LogEvent;
     displayaddress?: boolean;
@@ -78,7 +87,6 @@ type LoggingItemProps = {
 const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: LoggingItemProps) => {
     const { format } = useAppSelector(selectMessageFormat);
     const dispatch = useAppDispatch();
-    const [openSnackbar, setSnackbar] = useState(false);
 
     const { kind, time, payload } = logEvent;
     let label: string;
@@ -89,17 +97,12 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
     const wrap = (f: () => string) => {
         try {
             const paragraph = f();
-            return <div className={styles.loggingEventItemLine2}>
-                <SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} paragraph={paragraph} />
-                <IconButton aria-label="copy" size="small" onClick={() => writeText(paragraph).then(() => { setSnackbar(true) })}>
-                    <ContentCopyIcon fontSize="inherit" />
-                </IconButton>
-            </div>
+            return <SecondaryItem paragraph={paragraph} copy />
         } catch (error) {
             if (error instanceof Error) {
-                return <div className={styles.loggingEventItemLine2}><SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} color="text.disabled" paragraph={`<${error.message}>`} /></div>;
+                return <SecondaryItem color="text.disabled" paragraph={`<${error.message}>`} />;
             }
-            return <div className={styles.loggingEventItemLine2}><SecondaryItem className={styles.loggingEventItemLine2Content} sx={codesx} color="text.disabled" paragraph="<Unknown format error>" /></div>;
+            return <SecondaryItem color="text.disabled" paragraph="<Unknown format error>" />;
         }
     }
 
@@ -120,14 +123,15 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
     if (kind === "connect") {
         label = "CONNECT" + address;
         icon = <Avatar sx={{ bgcolor: green[500], height: 24, width: 24 }} ><LinkIcon sx={{ fontSize: 16 }} /></Avatar>;
-        secondary = <SecondaryItem paragraph={"/" + payload.tail} />;
+        secondary = <Typography variant="body2" color="text.secondary" noWrap>{"/" + payload.tail}</Typography>;
     } else if (kind === "disconnect") {
         label = "DISCONNECT" + address;
         icon = <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>;
-        secondary = <SecondaryItem paragraph={payload.message
-            ? `${payload.message.code}: ${payload.message.reason}`
-            : ""} />;
-
+        secondary = <Typography variant="body2" color="text.secondary" noWrap>{
+            payload.message
+                ? `${payload.message.code}: ${payload.message.reason}`
+                : "<no message>"
+        }</Typography>;
     } else if (kind === "message") {
         icon = payload.direction === "CLIENT"
             ? <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallReceivedIcon sx={{ fontSize: 16 }} /></Avatar>
@@ -140,15 +144,17 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
             secondary = transformBINARY[format](payload.message.BINARY.msg);
         } else {
             label = "UNKNOWN" + address;
-            secondary = <SecondaryItem sx={codesx} />;
+            secondary = <Typography variant="body2" color="text.secondary" noWrap>{"<no message>"}</Typography>;
         }
     } else {
         label = "UNKNOWN TYPE";
         icon = null;
-        secondary = <SecondaryItem />;
+        secondary = <Typography variant="body2" color="text.secondary" noWrap>{"<no message>"}</Typography>;
     }
     return (<>
-        <ListItem alignItems="flex-start"
+        <ListItem
+            className={styles.loggingEventItem}
+            alignItems="flex-start"
             secondaryAction={
                 <IconButton onClick={() => {
                     dispatch(navigate({
@@ -171,18 +177,10 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
                         {new Date(time).toLocaleString()}
                     </Typography>
                 </div>
-                <div>{secondary}</div>
+                <div className={styles.loggingEventItemLine2}>{secondary}</div>
             </div>
         </ListItem >
         <Divider component="li" />
-        <Snackbar
-            open={openSnackbar}
-            onClose={() => setSnackbar(false)}
-            autoHideDuration={1000}
-            message="Message copied"
-        >
-            <Alert severity="success">Message copied!</Alert>
-        </Snackbar>
     </>
     );
 }

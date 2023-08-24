@@ -24,6 +24,7 @@
 
 .loggingEventItemLine1 {
     display: flex;
+    align-items: baseline;
 }
 
 .loggingEventItemLine1Label {
@@ -32,4 +33,24 @@
 
 .loggingEventItemLine2 {
     display: flex;
+    align-items: flex-start;
+}
+
+.loggingEventItemLine2Content {
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loggingEventItem:nth-last-child(2) .loggingEventItemLine2Content {
+    flex: 1 1 auto;
+    overflow: auto;
+    text-overflow: clip;
+    white-space: pre;
+    max-height: 100px;
+}
+
+.loggingEventItemLine2ContentDisabled {
+    font-family: monospace;
 }

@@ -24,7 +24,9 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import SendIcon from '@mui/icons-material/Send';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
+import WarningIcon from "@mui/icons-material/Warning";
 import { navigate, setTitle } from "./features/uiSlice";
+import { openAlertDialog } from "./features/alertDialogSlice";
 import MessageFormat from './MessageFormat';
 import CloseDialog, { useCloseDialog } from "./CloseDialog";
 import { invoke } from "@tauri-apps/api";
@@ -80,7 +82,13 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                 />
                 <Button variant="contained" disabled={Boolean(connection.disconnection)} startIcon={<SendIcon />} onClick={() => {
                     invoke("send_text", { identifier, text: message }).catch(e => {
-                        alert("petó: " + e);
+                        dispatch(openAlertDialog({
+                            title: "Send message",
+                            icon: (
+                                <WarningIcon color="warning" fontSize="large" />
+                            ),
+                            content: e as string
+                        }));
                     });
                 }}>
                     Send
@@ -101,7 +109,13 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                 </Fab>
                 <CloseDialog {...closeDialogState} onOK={({ status, reason }) => {
                     invoke("close_client", { identifier, status, reason }).catch(e => {
-                        alert("petó: " + e);
+                        dispatch(openAlertDialog({
+                            title: "Close WebSocket connection",
+                            icon: (
+                                <WarningIcon color="warning" fontSize="large" />
+                            ),
+                            content: e as string
+                        }));
                     });
                 }} />
                 <Fab

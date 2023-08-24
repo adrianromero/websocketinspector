@@ -43,7 +43,7 @@ import { Divider, ListItemText, MenuItem } from "@mui/material";
 import { Logout } from "@mui/icons-material";
 import styles from "./App.module.css";
 import ServerBackdrop from "./ServerBackdrop";
-
+import AlertDialog from "./AlertDialog";
 
 const App: FC = () => {
 
@@ -180,6 +180,7 @@ const App: FC = () => {
                     {clientstatus.name === "starting" && <ServerBackdrop title="Starting..." />}
                     {clientstatus.name === "stopping" && <ServerBackdrop title="Stopping..." />}
                 </div>
+                <AlertDialog />
             </div>
         </>
     );

@@ -231,33 +231,43 @@ async fn user_connected(
         .insert(identifier, client_connection);
 
     while let Some(result) = user_ws_rx.next().await {
-        let msg = match result {
-            Ok(msg) => msg,
+        match result {
+            Ok(msg) => {
+                info!("received {:?}", msg); // Close(None)
+                if msg.is_close() {
+                    let disconnect = server::DisconnectMessage {
+                        client: client.clone(),
+                        message: msg.close_frame().map(|(code, reason)| server::CloseFrame {
+                            code,
+                            reason: String::from(reason),
+                        }),
+                    };
+                    app_handle
+                        .emit_all("client_disconnect", &disconnect)
+                        .unwrap();
+                } else {
+                    let message = server::ClientMessage {
+                        client: client.clone(),
+                        direction: server::Direction::CLIENT,
+                        message: server::MessageType::from(msg),
+                    };
+                    app_handle.emit_all("client_message", &message).unwrap();
+                }
+            }
             Err(e) => {
                 warn!("WebSocket error: {}", e);
-                break;
+                let disconnect = server::DisconnectMessage {
+                    client: client.clone(),
+                    message: Some(server::CloseFrame {
+                        code: 4000,
+                        reason: e.to_string(),
+                    }),
+                };
+                app_handle
+                    .emit_all("client_disconnect", &disconnect)
+                    .unwrap();
             }
         };
-        info!("received {:?}", msg); // Close(None)
-        if msg.is_close() {
-            let disconnect = server::DisconnectMessage {
-                client: client.clone(),
-                message: msg.close_frame().map(|(code, reason)| server::CloseFrame {
-                    code,
-                    reason: String::from(reason),
-                }),
-            };
-            app_handle
-                .emit_all("client_disconnect", &disconnect)
-                .unwrap();
-        } else {
-            let message = server::ClientMessage {
-                client: client.clone(),
-                direction: server::Direction::CLIENT,
-                message: server::MessageType::from(msg),
-            };
-            app_handle.emit_all("client_message", &message).unwrap();
-        }
     }
 
     client_connections.write().await.remove(&identifier);
@@ -310,7 +320,9 @@ async fn close_client(
             tx.send(Message::close_with(status, reason)).unwrap();
             return Ok(());
         }
-        return Err(ServerError::StatusError(String::from("Client not found.")));
+        return Err(ServerError::StatusError(String::from(
+            "WebSocket client not found.",
+        )));
     }
     return Err(ServerError::StatusError(String::from(
         "Server already stopped",

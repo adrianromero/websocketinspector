@@ -32,7 +32,6 @@ import {
 import {
     openAlertDialog
 } from "./features/alertDialogSlice";
-import AlertDialog from "./AlertDialog";
 import { useAppDispatch } from "./app/hooks";
 import styles from "./ServerForm.module.css";
 
@@ -108,7 +107,6 @@ const ServerForm: FC = () => {
                     </Button>
                 </DialogActions>
             </Dialog >
-            <AlertDialog />
         </>
     );
 };
