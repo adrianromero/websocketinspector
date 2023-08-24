@@ -80,6 +80,11 @@ const toWordArray = (uint8Array: number[]): CryptoJS.lib.WordArray => {
     return CryptoJS.lib.WordArray.create(words, uint8Array.length);
 }
 
+const splitInLines = (str: string) => {
+    const split = str.match(/.{1,40}/g);
+    return split ? split.join("\n") : "";
+}
+
 type LoggingItemProps = {
     logEvent: LogEvent;
     displayaddress?: boolean;
@@ -109,15 +114,15 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
     const transformTEXT = {
         "PLAIN": (msg: string) => wrap(() => msg),
         "JSON": (msg: string) => wrap(() => JSON.stringify(JSON.parse(msg), null, 2)),
-        "BASE64": (msg: string) => wrap(() => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(msg))),
-        "HEXADECIMAL": (msg: string) => wrap(() => CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(msg))),
+        "BASE64": (msg: string) => wrap(() => splitInLines(CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(msg)))),
+        "HEXADECIMAL": (msg: string) => wrap(() => splitInLines(CryptoJS.enc.Hex.stringify(CryptoJS.enc.Utf8.parse(msg)))),
     }
 
     const transformBINARY = {
         "PLAIN": (msg: number[]) => wrap(() => CryptoJS.enc.Utf8.stringify(toWordArray(msg))),
         "JSON": (msg: number[]) => wrap(() => JSON.stringify(JSON.parse(CryptoJS.enc.Utf8.stringify(toWordArray(msg))), null, 2)),
-        "BASE64": (msg: number[]) => wrap(() => CryptoJS.enc.Base64.stringify(toWordArray(msg))),
-        "HEXADECIMAL": (msg: number[]) => wrap(() => CryptoJS.enc.Hex.stringify(toWordArray(msg))),
+        "BASE64": (msg: number[]) => wrap(() => splitInLines(CryptoJS.enc.Base64.stringify(toWordArray(msg)))),
+        "HEXADECIMAL": (msg: number[]) => wrap(() => splitInLines(CryptoJS.enc.Hex.stringify(toWordArray(msg)))),
     }
 
     if (kind === "connect") {

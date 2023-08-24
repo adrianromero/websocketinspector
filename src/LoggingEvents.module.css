@@ -36,7 +36,7 @@
     align-items: flex-start;
 }
 
-.loggingEventItemLine2Content {
+.loggingEventItem .loggingEventItemLine2Content {
     font-family: monospace;
     overflow: hidden;
     text-overflow: ellipsis;
