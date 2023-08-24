@@ -47,10 +47,18 @@ export type BinaryMessage = {
     BINARY: { msg: number[] };
 };
 
+export type PingMessage = {
+    PING: { msg: number[] };
+};
+
+export type PongMessage = {
+    PONG: { msg: number[] };
+};
+
 export type Message = {
     client: Client;
     direction: "SERVER" | "CLIENT";
-    message: TextMessage | BinaryMessage;
+    message: TextMessage | BinaryMessage | PingMessage | PongMessage;
 };
 
 export type LogEventMessage = {

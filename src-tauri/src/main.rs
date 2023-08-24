@@ -259,7 +259,7 @@ async fn user_connected(
                 let disconnect = server::DisconnectMessage {
                     client: client.clone(),
                     message: Some(server::CloseFrame {
-                        code: 4000,
+                        code: 65535,
                         reason: e.to_string(),
                     }),
                 };

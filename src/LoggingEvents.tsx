@@ -127,11 +127,17 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
     } else if (kind === "disconnect") {
         label = "DISCONNECT" + address;
         icon = <Avatar sx={{ bgcolor: red[500], height: 24, width: 24 }} ><LinkOffIcon sx={{ fontSize: 16 }} /></Avatar>;
-        secondary = <Typography variant="body2" color="text.secondary" noWrap>{
-            payload.message
-                ? `${payload.message.code}: ${payload.message.reason}`
-                : "<no message>"
-        }</Typography>;
+        let closemessage;
+        if (payload.message) {
+            if (payload.message.code === 65535) {
+                closemessage = payload.message.reason;
+            } else {
+                closemessage = `${payload.message.code}: ${payload.message.reason}`
+            }
+        } else {
+            closemessage = "<no message>"
+        }
+        secondary = <Typography variant="body2" color="text.secondary" noWrap>{closemessage}</Typography>;
     } else if (kind === "message") {
         icon = payload.direction === "CLIENT"
             ? <Avatar sx={{ bgcolor: blue[500], height: 24, width: 24 }} ><CallReceivedIcon sx={{ fontSize: 16 }} /></Avatar>
@@ -142,6 +148,12 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
         } else if ("BINARY" in payload.message) {
             label = "BINARY" + address;
             secondary = transformBINARY[format](payload.message.BINARY.msg);
+        } else if ("PING" in payload.message) {
+            label = "PING" + address;
+            secondary = transformBINARY[format](payload.message.PING.msg);
+        } else if ("PONG" in payload.message) {
+            label = "PONG" + address;
+            secondary = transformBINARY[format](payload.message.PONG.msg);
         } else {
             label = "UNKNOWN" + address;
             secondary = <Typography variant="body2" color="text.secondary" noWrap>{"<no message>"}</Typography>;
