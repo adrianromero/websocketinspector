@@ -27,7 +27,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import WarningIcon from "@mui/icons-material/Warning";
 import { navigate, setTitle } from "./features/uiSlice";
 import { openAlertDialog } from "./features/alertDialogSlice";
-import MessageFormat from './MessageFormat';
 import CloseDialog, { useCloseDialog } from "./CloseDialog";
 import { invoke } from "@tauri-apps/api";
 import LoggingEvents from "./LoggingEvents";
@@ -95,7 +94,6 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                 </Button>
             </div>
             <div className={scroll.topToolbar}>
-                <MessageFormat />
                 <Fab variant="extended"
                     disabled={Boolean(connection.disconnection)} onClick={() => {
                         openCloseDialog();

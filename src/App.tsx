@@ -34,21 +34,39 @@ import Typography from "@mui/material/Typography";
 import ListItemIcon from '@mui/material/ListItemIcon';
 import MessageIcon from '@mui/icons-material/Message';
 import BoltIcon from '@mui/icons-material/Bolt';
+import CheckIcon from '@mui/icons-material/Check';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import Menu from "@mui/material/Menu";
 import { useAppSelector, useAppDispatch } from "./app/hooks";
-
+import {
+    setMessageFormat, selectMessageFormat
+} from "./features/messageFormatSlice";
 import { Divider, ListItemText, MenuItem } from "@mui/material";
 import { Logout } from "@mui/icons-material";
 import styles from "./App.module.css";
 import ServerBackdrop from "./ServerBackdrop";
 import AlertDialog from "./AlertDialog";
+import type {
+    MessageFormatEnum
+} from "./features/messageFormatSlice";
 
+
+type FormatMenuItemProps = {
+    menuFormat: MessageFormatEnum;
+}
+
+const MENULABELS: { [key: string]: string } = {
+    "PLAIN": "Plain",
+    "JSON": "JSON",
+    "BASE64": "Base64",
+    "HEXADECIMAL": "Hexadecimal",
+}
 const App: FC = () => {
 
     const dispatch = useAppDispatch();
     const clientstatus = useAppSelector(selectClientStatus);
+    const { format } = useAppSelector(selectMessageFormat);
     const started = clientstatus.name === "started";
     const title = useAppSelector(selectTitle);
     const { view, path } = useAppSelector(selectAddress);
@@ -77,6 +95,20 @@ const App: FC = () => {
         dispatch(navigate({ view }));
         setAnchorEl(null);
     };
+    const handleFormatClick = (fmt: MessageFormatEnum) => () => {
+        dispatch(setMessageFormat(fmt))
+        setAnchorEl(null);
+    };
+
+    const FormatMenuItem: FC<FormatMenuItemProps> = ({ menuFormat }) =>
+        (menuFormat === format)
+            ? <MenuItem key={menuFormat} onClick={handleClose}>
+                <ListItemIcon>
+                    <CheckIcon />
+                </ListItemIcon>
+                <ListItemText>{MENULABELS[menuFormat]}</ListItemText>
+            </MenuItem>
+            : <MenuItem key={menuFormat} onClick={handleFormatClick(menuFormat)}><ListItemText inset>{MENULABELS[menuFormat]}</ListItemText></MenuItem>;
 
     return (
         <>
@@ -165,6 +197,11 @@ const App: FC = () => {
                         </ListItemIcon>
                         Events log
                     </MenuItem>
+                    <Divider />
+                    <FormatMenuItem menuFormat="PLAIN" />
+                    <FormatMenuItem menuFormat="JSON" />
+                    <FormatMenuItem menuFormat="BASE64" />
+                    <FormatMenuItem menuFormat="HEXADECIMAL" />
                     <Divider />
                     <MenuItem onClick={handleDisconnect}>
                         <ListItemIcon>
