@@ -63,6 +63,9 @@ fn main() {
             start_server,
             stop_server,
             send_text,
+            send_binary,
+            send_ping,
+            send_pong,
             close_client,
         ])
         .run(tauri::generate_context!())
@@ -328,12 +331,58 @@ async fn close_client(
         "Server already stopped",
     )));
 }
+
 #[tauri::command]
 async fn send_text(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, TauriState>,
     identifier: usize,
-    text: String,
+    msg: Vec<u8>,
+) -> Result<(), ()> {
+    send_message(
+        app_handle,
+        state,
+        identifier,
+        Message::text(String::from_utf8_lossy(&msg)),
+    )
+    .await
+}
+
+#[tauri::command]
+async fn send_binary(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    msg: Vec<u8>,
+) -> Result<(), ()> {
+    send_message(app_handle, state, identifier, Message::binary(msg)).await
+}
+
+#[tauri::command]
+async fn send_ping(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    msg: Vec<u8>,
+) -> Result<(), ()> {
+    send_message(app_handle, state, identifier, Message::ping(msg)).await
+}
+
+#[tauri::command]
+async fn send_pong(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    msg: Vec<u8>,
+) -> Result<(), ()> {
+    send_message(app_handle, state, identifier, Message::pong(msg)).await
+}
+
+async fn send_message(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, TauriState>,
+    identifier: usize,
+    message: Message,
 ) -> Result<(), ()> {
     let mut srv = state.write().await;
     let mystate = srv.as_mut();
@@ -349,9 +398,8 @@ async fn send_text(
             tx,
         }) = client_connections.read().await.get(&identifier)
         {
-            info!("Sending {}", &text);
-            let msg = Message::text(text);
-            tx.send(msg.clone()).unwrap();
+            info!("Sending {:?}", &message);
+            tx.send(message.clone()).unwrap();
 
             let message = server::ClientMessage {
                 client: server::Client {
@@ -359,14 +407,14 @@ async fn send_text(
                     address: address.clone(),
                 },
                 direction: server::Direction::SERVER,
-                message: server::MessageType::from(msg),
+                message: server::MessageType::from(message),
             };
             app_handle.emit_all("client_message", &message).unwrap();
         } else {
-            warn!("Client not found");
+            warn!("Client not found {identifier}");
         }
     } else {
-        warn!("No Server to stop");
+        warn!("No Server started");
     }
 
     Ok(())

@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useRef } from "react";
 import { Connection, selectWebsocketConnection } from "./features/websocketSlice";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
+import CryptoJS from "crypto-js";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import scroll from "./Scroll.module.css";
-import { Button, Fab, IconButton, InputAdornment, TextField } from "@mui/material";
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import { Button, ButtonGroup, ClickAwayListener, Fab, Grow, IconButton, InputAdornment, MenuItem, MenuList, Paper, Popper, TextField } from "@mui/material";
 import LinkOffIcon from '@mui/icons-material/LinkOff';
-import SendIcon from '@mui/icons-material/Send';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningIcon from "@mui/icons-material/Warning";
@@ -31,6 +31,46 @@ import CloseDialog, { useCloseDialog } from "./CloseDialog";
 import { invoke } from "@tauri-apps/api";
 import LoggingEvents from "./LoggingEvents";
 
+import scroll from "./Scroll.module.css";
+import styles from "./ClientMessages.module.css";
+
+type MessageIndex = "_text" | "_binary" | "_ping" | "_pong";
+const messageTypes: Map<MessageIndex, string> = new Map([
+    ["_text", "Text"],
+    ["_binary", "Binary"],
+    ["_ping", "Ping"],
+    ["_pong", "Pong"],
+]);
+
+function getMessageType(index: MessageIndex): string {
+    return messageTypes.get(index)!;
+}
+
+function toBytes(wordArray: CryptoJS.lib.WordArray): number[] {
+    const bytes: number[] = [];
+    const fullwords = wordArray.sigBytes >>> 2; //equal div 4
+    const lastbytes = wordArray.sigBytes % 4;
+    for (let i = 0; i < fullwords; i++) {
+        const word = wordArray.words[i];
+        bytes.push(word >>> 24);
+        bytes.push((word >>> 16) & 0xFF);
+        bytes.push((word >>> 8) & 0xFF);
+        bytes.push(word & 0xFF);
+    }
+    if (lastbytes > 0) {
+        const word = wordArray.words[fullwords];
+        bytes.push(word >>> 24);
+        if (lastbytes > 1) {
+            bytes.push((word >>> 16) & 0xFF);
+        }
+        if (lastbytes > 2) {
+            bytes.push((word >>> 8) & 0xFF);
+        }
+    }
+    return bytes;
+}
+
+
 const ClientMessages: FC<{ path?: string }> = ({ path }) => {
     const dispatch = useAppDispatch();
     const identifier = Number(path);
@@ -38,16 +78,44 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
     const [closeDialogState, { openCloseDialog }] = useCloseDialog();
     const [message, setMessage] = useState("");
 
+    const [open, setOpen] = useState(false);
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const [selectedIndex, setSelectedIndex] = useState<MessageIndex>("_text");
+
     useEffect(() => {
         if (connection) {
             dispatch(setTitle(String(connection.request.payload.client.address)));
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, []);
 
     if (!connection) {
         throw new Error();
     }
+
+    const MessageMenuItem: FC<{ index: MessageIndex }> = ({ index }) => {
+        return <MenuItem
+            key={index}
+            disabled={false}
+            selected={selectedIndex === index
+            }
+            onClick={() => {
+                setSelectedIndex(index);
+                setOpen(false);
+            }}
+        > {getMessageType(index)}</MenuItem >;
+    }
+
+    const handleClose = (event: Event) => {
+        if (
+            anchorRef.current &&
+            anchorRef.current.contains(event.target as HTMLElement)
+        ) {
+            return;
+        }
+
+        setOpen(false);
+    };
 
     const clientlog = connection.disconnection
         ? [connection.request, ...connection.messages, connection.disconnection]
@@ -55,13 +123,70 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
 
     return (
         <>
-
             <div style={{ height: "1.5rem" }}></div>
             <div className={scroll.scrollcontainer} style={{ flexGrow: "1" }}>
                 <LoggingEvents className={scroll.scrolllist} clientlog={clientlog} />
             </div >
-            <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "0.5rem" }}>
-                <TextField fullWidth multiline rows={4} disabled={Boolean(connection.disconnection)} value={message}
+            <div className={styles.sendbox}>
+                <ButtonGroup variant="contained" ref={anchorRef} aria-label="split button">
+                    <Button variant="contained" disabled={Boolean(connection.disconnection)} onClick={() => {
+                        invoke("send" + selectedIndex, { identifier, msg: toBytes(CryptoJS.enc.Utf8.parse(message)) }).catch(e => {
+                            dispatch(openAlertDialog({
+                                title: `Send ${getMessageType(selectedIndex)} message`,
+                                icon: (
+                                    <WarningIcon color="warning" fontSize="large" />
+                                ),
+                                content: e as string
+                            }));
+                        });
+                    }}>
+                        Send {getMessageType(selectedIndex)}
+                    </Button>
+                    <Button
+                        size="small"
+                        disabled={Boolean(connection.disconnection)}
+                        aria-controls={open ? 'split-button-menu' : undefined}
+                        aria-expanded={open ? 'true' : undefined}
+                        aria-label="select merge strategy"
+                        aria-haspopup="menu"
+                        onClick={() => setOpen(prevOpen => !prevOpen)}
+                    >
+                        <ArrowDropDownIcon />
+                    </Button>
+                </ButtonGroup>
+                <Popper
+                    sx={{
+                        zIndex: 1,
+                    }}
+                    open={open}
+                    anchorEl={anchorRef.current}
+                    role={undefined}
+                    transition
+                    disablePortal
+                >
+                    {({ TransitionProps, placement }) => (
+                        <Grow
+                            {...TransitionProps}
+                            style={{
+                                transformOrigin:
+                                    placement === 'bottom' ? 'center top' : 'center bottom',
+                            }}
+                        >
+                            <Paper>
+                                <ClickAwayListener onClickAway={handleClose}>
+                                    <MenuList id="split-button-menu" autoFocusItem>
+                                        <MessageMenuItem index="_text" />
+                                        <MessageMenuItem index="_binary" />
+                                        <MessageMenuItem index="_ping" />
+                                        <MessageMenuItem index="_pong" />
+                                    </MenuList>
+                                </ClickAwayListener>
+                            </Paper>
+                        </Grow>
+                    )}
+                </Popper>
+
+                <TextField fullWidth multiline rows={6} disabled={Boolean(connection.disconnection)} value={message}
                     InputProps={{
                         endAdornment: (
                             <InputAdornment position="end">
@@ -79,19 +204,6 @@ const ClientMessages: FC<{ path?: string }> = ({ path }) => {
                         setMessage(event.target.value);
                     }}
                 />
-                <Button variant="contained" disabled={Boolean(connection.disconnection)} startIcon={<SendIcon />} onClick={() => {
-                    invoke("send_text", { identifier, text: message }).catch(e => {
-                        dispatch(openAlertDialog({
-                            title: "Send message",
-                            icon: (
-                                <WarningIcon color="warning" fontSize="large" />
-                            ),
-                            content: e as string
-                        }));
-                    });
-                }}>
-                    Send
-                </Button>
             </div>
             <div className={scroll.topToolbar}>
                 <Fab variant="extended"

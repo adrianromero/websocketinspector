@@ -27,11 +27,9 @@ import type { LogEvent } from "./features/websocketSlice"
 import {
     selectMessageFormat
 } from "./features/messageFormatSlice";
-import { useAppDispatch, useAppSelector } from "./app/hooks";
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useAppSelector } from "./app/hooks";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import styles from "./LoggingEvents.module.css";
-import { navigate } from "./features/uiSlice";
 
 type SecondaryItemProps = {
     paragraph?: string;
@@ -91,7 +89,6 @@ type LoggingItemProps = {
 };
 const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: LoggingItemProps) => {
     const { format } = useAppSelector(selectMessageFormat);
-    const dispatch = useAppDispatch();
 
     const { kind, time, payload } = logEvent;
     let label: string;
@@ -168,20 +165,21 @@ const LoggingItem: FC<LoggingItemProps> = ({ logEvent, displayaddress }: Logging
         icon = null;
         secondary = <Typography variant="body2" color="text.secondary" noWrap>{"<no message>"}</Typography>;
     }
+
+    // secondaryAction={
+    //     <IconButton onClick={() => {
+    //         dispatch(navigate({
+    //             view: "client",
+    //             path: "pepe"
+    //         }))
+    //     }} edge="end" aria-label="delete">
+    //         <ChevronRightIcon />
+    //     </IconButton>
+    // }
     return (<>
         <ListItem
             className={styles.loggingEventItem}
-            alignItems="flex-start"
-            secondaryAction={
-                <IconButton onClick={() => {
-                    dispatch(navigate({
-                        view: "client",
-                        path: "pepe"
-                    }))
-                }} edge="end" aria-label="delete">
-                    <ChevronRightIcon />
-                </IconButton>
-            }>
+            alignItems="flex-start">
             <ListItemAvatar>
                 {icon}
             </ListItemAvatar>
